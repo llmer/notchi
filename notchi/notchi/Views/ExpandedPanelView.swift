@@ -13,19 +13,15 @@ struct ExpandedPanelView: View {
     var body: some View {
         GeometryReader { geometry in
             VStack(alignment: .leading, spacing: 0) {
-                // Grass at top - OUTSIDE padding for edge-to-edge
-                GrassIslandView(state: state)
+                Spacer()
                     .frame(height: geometry.size.height * 0.3)
-                    .frame(maxWidth: .infinity)
 
-                // Rest of content WITH padding
                 VStack(alignment: .leading, spacing: 0) {
                     if !stats.recentEvents.isEmpty || stats.isProcessing {
                         Divider().background(Color.white.opacity(0.08))
                         activitySection
                     }
 
-                    // Empty state when no session/events
                     if stats.sessionStartTime == nil && stats.recentEvents.isEmpty {
                         Spacer()
                         emptyState

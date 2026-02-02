@@ -39,23 +39,32 @@ struct NotchContentView: View {
         isExpanded ? cornerRadiusInsets.opened.bottom : cornerRadiusInsets.closed.bottom
     }
 
+    private var grassHeight: CGFloat {
+        let expandedPanelHeight = openedSize.height - notchSize.height - 24
+        return expandedPanelHeight * 0.3 + notchSize.height
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             notchLayout
         }
         .padding(.horizontal, isExpanded ? cornerRadiusInsets.opened.top : cornerRadiusInsets.closed.bottom)
         .padding(.bottom, isExpanded ? 12 : 0)
-        .background(.black)
+        .background {
+            if isExpanded {
+                VStack(spacing: 0) {
+                    GrassIslandView(state: stateMachine.currentState)
+                        .frame(height: grassHeight)
+                    Color.black
+                }
+            } else {
+                Color.black
+            }
+        }
         .clipShape(NotchShape(
             topCornerRadius: topCornerRadius,
             bottomCornerRadius: bottomCornerRadius
         ))
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(.black)
-                .frame(height: 1)
-                .padding(.horizontal, topCornerRadius)
-        }
         .shadow(
             color: isExpanded ? .black.opacity(0.7) : .clear,
             radius: 6
