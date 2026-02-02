@@ -1,5 +1,10 @@
 import SwiftUI
 
+enum NotchConstants {
+    static let expandedPanelSize = CGSize(width: 450, height: 450)
+    static let expandedPanelHorizontalPadding: CGFloat = 19 * 2
+}
+
 extension Notification.Name {
     static let notchiShouldCollapse = Notification.Name("notchiShouldCollapse")
     static let notchiOpenSettings = Notification.Name("notchiOpenSettings")
@@ -16,8 +21,6 @@ struct NotchContentView: View {
     var panelManager: NotchPanelManager = .shared
     var usageService: ClaudeUsageService = .shared
     @State private var bobOffset: CGFloat = 0
-
-    private let openedSize = CGSize(width: 380, height: 400)
 
     private var isExpanded: Bool { panelManager.isExpanded }
 
@@ -40,7 +43,7 @@ struct NotchContentView: View {
     }
 
     private var grassHeight: CGFloat {
-        let expandedPanelHeight = openedSize.height - notchSize.height - 24
+        let expandedPanelHeight = NotchConstants.expandedPanelSize.height - notchSize.height - 24
         return expandedPanelHeight * 0.3 + notchSize.height
     }
 
@@ -95,7 +98,10 @@ struct NotchContentView: View {
                     usageService: usageService,
                     onSettingsTap: { openSettings() }
                 )
-                .frame(width: openedSize.width - 48, height: openedSize.height - notchSize.height - 24)
+                .frame(
+                    width: NotchConstants.expandedPanelSize.width - 48,
+                    height: NotchConstants.expandedPanelSize.height - notchSize.height - 24
+                )
             }
         }
     }

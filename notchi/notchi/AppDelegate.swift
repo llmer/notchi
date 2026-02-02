@@ -56,13 +56,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         // Expanded panel area (screen coordinates)
-        let panelWidth: CGFloat = 420
-        let panelHeight: CGFloat = 450
+        let panelSize = NotchConstants.expandedPanelSize
+        let panelWidth = panelSize.width + NotchConstants.expandedPanelHorizontalPadding
         let panelRect = CGRect(
             x: notchCenterX - panelWidth / 2,
-            y: screenFrame.maxY - panelHeight,
+            y: screenFrame.maxY - panelSize.height,
             width: panelWidth,
-            height: panelHeight
+            height: panelSize.height
         )
 
         NotchPanelManager.shared.configure(
