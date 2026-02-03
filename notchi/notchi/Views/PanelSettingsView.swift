@@ -33,11 +33,7 @@ struct PanelSettingsView: View {
                 trailing: AnyView(dropdownIndicator("Auto"))
             )
 
-            SettingsRowView(
-                icon: "speaker.wave.2",
-                title: "Notification Sound",
-                trailing: AnyView(dropdownIndicator("Default"))
-            )
+            SoundPickerView()
         }
     }
 
@@ -101,6 +97,7 @@ struct PanelSettingsView: View {
             .padding(.vertical, 10)
             .padding(.horizontal, 12)
             .background(TerminalColors.red.opacity(0.1))
+            .contentShape(Rectangle())
             .cornerRadius(8)
         }
         .buttonStyle(.plain)
@@ -162,6 +159,7 @@ struct SettingsRowView: View {
             trailing
         }
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
     }
 }
 
