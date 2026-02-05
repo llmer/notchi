@@ -5,6 +5,7 @@ enum KeychainManager {
     private static let service = "com.ruban.notchi"
     private static let sessionKeyAccount = "claude-session-key"
     private static let orgIdAccount = "claude-org-id"
+    private static let cookieAccount = "claude-cookie"
 
     static func save(sessionKey: String) -> Bool {
         save(value: sessionKey, account: sessionKeyAccount)
@@ -12,6 +13,10 @@ enum KeychainManager {
 
     static func save(organizationId: String) -> Bool {
         save(value: organizationId, account: orgIdAccount)
+    }
+
+    static func save(cookie: String) -> Bool {
+        save(value: cookie, account: cookieAccount)
     }
 
     static func getSessionKey() -> String? {
@@ -22,9 +27,14 @@ enum KeychainManager {
         get(account: orgIdAccount)
     }
 
+    static func getCookie() -> String? {
+        get(account: cookieAccount)
+    }
+
     static func deleteCredentials() {
         delete(account: sessionKeyAccount)
         delete(account: orgIdAccount)
+        delete(account: cookieAccount)
     }
 
     static var hasCredentials: Bool {

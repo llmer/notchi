@@ -1,9 +1,8 @@
 import SwiftUI
 
 struct CredentialsFormView: View {
-    @State private var sessionKey = ""
-    @State private var organizationId = ""
-    @State private var showSessionKey = false
+    @State private var cookieInput = ""
+    @State private var showCookie = false
     @State private var saveStatus: SaveStatus = .idle
     var usageService: ClaudeUsageService = .shared
 
@@ -11,8 +10,24 @@ struct CredentialsFormView: View {
         KeychainManager.hasCredentials
     }
 
-    private var isSessionKeyValid: Bool {
-        sessionKey.hasPrefix("sk-ant-") || sessionKey.contains("sessionKey=sk-ant-")
+    private var parsedSessionKey: String? {
+        extractValue(from: cookieInput, key: "sessionKey")
+    }
+
+    private var parsedOrgId: String? {
+        extractValue(from: cookieInput, key: "lastActiveOrg")
+    }
+
+    private var isCookieValid: Bool {
+        parsedSessionKey != nil && parsedOrgId != nil
+    }
+
+    private func extractValue(from cookie: String, key: String) -> String? {
+        cookie
+            .split(separator: ";")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .first { $0.hasPrefix("\(key)=") }
+            .map { String($0.dropFirst(key.count + 1)) }
     }
 
     private var statusColor: Color {
@@ -77,9 +92,7 @@ struct CredentialsFormView: View {
             VStack(alignment: .leading, spacing: 4) {
                 firstInstructionRow
                 instructionRow("2", "Open DevTools (Cmd+Opt+I) > Network")
-                instructionRow("3", "Refresh page, find 'usage' request")
-                instructionRow("4", "From URL: copy org ID")
-                instructionRow("5", "From Cookie header: copy entire value")
+                instructionRow("3", "Refresh, find any request, copy Cookie header")
             }
         }
     }
@@ -114,57 +127,41 @@ struct CredentialsFormView: View {
     }
 
     private var formSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Organization ID")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(TerminalColors.secondaryText)
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Cookie")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(TerminalColors.secondaryText)
 
-                TextField("e.g. 5babc6bf-d5da-...", text: $organizationId)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 12, design: .monospaced))
-                    .padding(10)
-                    .background(TerminalColors.subtleBackground)
-                    .foregroundColor(TerminalColors.primaryText)
-                    .cornerRadius(6)
+            HStack(spacing: 8) {
+                Group {
+                    if showCookie {
+                        TextField("Paste full cookie string", text: $cookieInput)
+                    } else {
+                        SecureField("Paste full cookie string", text: $cookieInput)
+                    }
+                }
+                .textFieldStyle(.plain)
+                .font(.system(size: 12, design: .monospaced))
+                .padding(10)
+                .background(TerminalColors.subtleBackground)
+                .foregroundColor(TerminalColors.primaryText)
+                .cornerRadius(6)
+
+                Button(action: { showCookie.toggle() }) {
+                    Image(systemName: showCookie ? "eye.slash" : "eye")
+                        .font(.system(size: 12))
+                        .foregroundColor(TerminalColors.secondaryText)
+                        .frame(width: 32, height: 32)
+                        .background(TerminalColors.subtleBackground)
+                        .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Cookie")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(TerminalColors.secondaryText)
-
-                HStack(spacing: 8) {
-                    Group {
-                        if showSessionKey {
-                            TextField("Paste full cookie string", text: $sessionKey)
-                        } else {
-                            SecureField("Paste full cookie string", text: $sessionKey)
-                        }
-                    }
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 12, design: .monospaced))
-                    .padding(10)
-                    .background(TerminalColors.subtleBackground)
-                    .foregroundColor(TerminalColors.primaryText)
-                    .cornerRadius(6)
-
-                    Button(action: { showSessionKey.toggle() }) {
-                        Image(systemName: showSessionKey ? "eye.slash" : "eye")
-                            .font(.system(size: 12))
-                            .foregroundColor(TerminalColors.secondaryText)
-                            .frame(width: 32, height: 32)
-                            .background(TerminalColors.subtleBackground)
-                            .cornerRadius(6)
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                if !sessionKey.isEmpty && !isSessionKeyValid {
-                    Text("Cookie should contain 'sessionKey=sk-ant-...'")
-                        .font(.system(size: 10))
-                        .foregroundColor(TerminalColors.amber)
-                }
+            if !cookieInput.isEmpty && !isCookieValid {
+                Text("Cookie must contain sessionKey and lastActiveOrg")
+                    .font(.system(size: 10))
+                    .foregroundColor(TerminalColors.amber)
             }
         }
     }
@@ -202,7 +199,7 @@ struct CredentialsFormView: View {
 
     private var actionsSection: some View {
         HStack(spacing: 10) {
-            actionButton("Save", color: TerminalColors.green, disabled: sessionKey.isEmpty || organizationId.isEmpty) {
+            actionButton("Save", color: TerminalColors.green, disabled: !isCookieValid) {
                 saveCredentials()
             }
 
@@ -232,19 +229,22 @@ struct CredentialsFormView: View {
     }
 
     private func loadStoredCredentials() {
-        if let orgId = KeychainManager.getOrganizationId() {
-            organizationId = orgId
-        }
-        if let key = KeychainManager.getSessionKey() {
-            sessionKey = key
+        if let cookie = KeychainManager.getCookie() {
+            cookieInput = cookie
         }
     }
 
     private func saveCredentials() {
-        let orgSaved = KeychainManager.save(organizationId: organizationId)
+        guard let sessionKey = parsedSessionKey, let orgId = parsedOrgId else {
+            saveStatus = .error("Invalid cookie")
+            return
+        }
+
+        let cookieSaved = KeychainManager.save(cookie: cookieInput)
+        let orgSaved = KeychainManager.save(organizationId: orgId)
         let keySaved = KeychainManager.save(sessionKey: sessionKey)
 
-        if orgSaved && keySaved {
+        if cookieSaved && orgSaved && keySaved {
             saveStatus = .saved
             ClaudeUsageService.shared.startPolling()
 
@@ -265,8 +265,7 @@ struct CredentialsFormView: View {
 
     private func clearCredentials() {
         KeychainManager.deleteCredentials()
-        sessionKey = ""
-        organizationId = ""
+        cookieInput = ""
         ClaudeUsageService.shared.stopPolling()
         ClaudeUsageService.shared.currentUsage = nil
         saveStatus = .idle
