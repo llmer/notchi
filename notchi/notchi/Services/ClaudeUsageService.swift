@@ -41,8 +41,8 @@ final class ClaudeUsageService {
         stopPolling()
 
         Task {
-            guard let accessToken = KeychainManager.getAccessTokenSilently() else {
-                logger.info("Silent keychain access unavailable")
+            guard let accessToken = KeychainManager.getCachedOAuthToken() else {
+                logger.info("No cached token, user must connect manually")
                 isConnected = false
                 AppSettings.isUsageEnabled = false
                 return
@@ -64,6 +64,7 @@ final class ClaudeUsageService {
     }
 
     private func schedulePollTimer() {
+        pollTimer?.invalidate()
         pollTimer = Timer.scheduledTimer(withTimeInterval: pollInterval, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 await self?.fetchUsage()
@@ -106,6 +107,15 @@ final class ClaudeUsageService {
             guard httpResponse.statusCode == 200 else {
                 if Self.authFailureStatusCodes.contains(httpResponse.statusCode) {
                     cachedToken = nil
+                    KeychainManager.clearCachedOAuthToken()
+
+                    if let freshToken = KeychainManager.refreshAccessTokenSilently(),
+                       freshToken != accessToken {
+                        logger.info("Token refreshed silently from Claude Code keychain")
+                        await fetchAndStartPolling(with: freshToken)
+                        return
+                    }
+
                     error = "Token expired"
                     isConnected = false
                     stopPolling()

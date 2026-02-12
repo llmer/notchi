@@ -1,18 +1,18 @@
 import Foundation
-import LocalAuthentication
 import Security
 
 enum KeychainManager {
     private static let claudeCodeService = "Claude Code-credentials"
     private static let notchiService = "com.ruban.notchi"
     private static let anthropicApiKeyAccount = "anthropicApiKey"
+    private static let cachedOAuthTokenAccount = "cachedOAuthToken"
 
     static func getAccessToken() -> String? {
-        extractAccessToken(from: readClaudeCodeCredentials(allowInteraction: true))
+        readAndCacheAccessToken(allowInteraction: true)
     }
 
-    static func getAccessTokenSilently() -> String? {
-        extractAccessToken(from: readClaudeCodeCredentials(allowInteraction: false))
+    static func refreshAccessTokenSilently() -> String? {
+        readAndCacheAccessToken(allowInteraction: false)
     }
 
     // MARK: - Anthropic API Key
@@ -29,18 +29,33 @@ enum KeychainManager {
         }
     }
 
+    // MARK: - Cached OAuth Token
+
+    static func getCachedOAuthToken() -> String? {
+        readString(service: notchiService, account: cachedOAuthTokenAccount)
+    }
+
+    static func cacheOAuthToken(_ token: String) {
+        saveString(token, service: notchiService, account: cachedOAuthTokenAccount)
+    }
+
+    static func clearCachedOAuthToken() {
+        deleteItem(service: notchiService, account: cachedOAuthTokenAccount)
+    }
+
     // MARK: - Claude Code Credentials
 
-    private static func extractAccessToken(from json: [String: Any]?) -> String? {
-        guard let json,
+    private static func readAndCacheAccessToken(allowInteraction: Bool) -> String? {
+        guard let json = readClaudeCodeKeychain(allowInteraction: allowInteraction),
               let oauth = json["claudeAiOauth"] as? [String: Any],
               let token = oauth["accessToken"] as? String else {
             return nil
         }
+        cacheOAuthToken(token)
         return token
     }
 
-    private static func readClaudeCodeCredentials(allowInteraction: Bool) -> [String: Any]? {
+    private static func readClaudeCodeKeychain(allowInteraction: Bool) -> [String: Any]? {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: claudeCodeService,
@@ -49,9 +64,7 @@ enum KeychainManager {
         ]
 
         if !allowInteraction {
-            let context = LAContext()
-            context.interactionNotAllowed = true
-            query[kSecUseAuthenticationContext as String] = context
+            query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUISkip
         }
 
         var result: AnyObject?
