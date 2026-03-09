@@ -6,11 +6,9 @@ A macOS notch companion that reacts to Claude Code activity in real-time.
 
 ## What it does
 
-- Lives in the Mac notch area as an animated Claude mascot on a grass island
 - Reacts to Claude Code events in real-time (thinking, working, errors, completions)
 - Analyzes conversation sentiment to show emotions (happy, sad, neutral, sob)
-- Shows thought bubbles with contextual commentary
-- Click to expand and see session stats (duration, tokens, cost estimate, activity feed)
+- Click to expand and see session usage
 - Supports multiple concurrent Claude Code sessions with individual sprites
 - Sound effects for events (optional, auto-muted when terminal is focused)
 - Auto-updates via Sparkle
