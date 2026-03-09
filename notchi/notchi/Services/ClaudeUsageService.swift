@@ -1,7 +1,7 @@
 import Foundation
 import os.log
 
-private let logger = Logger(subsystem: "com.ruban.notchi", category: "ClaudeUsageService")
+private let logger = Logger(subsystem: "com.mps.notchi", category: "ClaudeUsageService")
 
 @MainActor @Observable
 final class ClaudeUsageService {

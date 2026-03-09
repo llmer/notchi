@@ -1,7 +1,7 @@
 import Foundation
 import os.log
 
-private let logger = Logger(subsystem: "com.ruban.notchi", category: "EmotionState")
+private let logger = Logger(subsystem: "com.mps.notchi", category: "EmotionState")
 
 @MainActor
 @Observable

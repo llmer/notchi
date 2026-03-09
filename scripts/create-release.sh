@@ -9,7 +9,7 @@ set -euo pipefail
 
 # --- Configuration ---
 TEAM_ID="SXT98GH5HN"
-BUNDLE_ID="com.ruban.notchi"
+BUNDLE_ID="com.mps.notchi"
 SCHEME="notchi"
 PROJECT_PATH="notchi/notchi.xcodeproj"
 APPCAST_OUTPUT="docs/appcast.xml"

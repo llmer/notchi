@@ -1,7 +1,7 @@
 import Foundation
 import os.log
 
-private let logger = Logger(subsystem: "com.ruban.notchi", category: "SessionData")
+private let logger = Logger(subsystem: "com.mps.notchi", category: "SessionData")
 
 struct PendingQuestion {
     let question: String

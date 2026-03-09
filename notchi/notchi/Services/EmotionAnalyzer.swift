@@ -1,7 +1,7 @@
 import Foundation
 import os.log
 
-private let logger = Logger(subsystem: "com.ruban.notchi", category: "EmotionAnalyzer")
+private let logger = Logger(subsystem: "com.mps.notchi", category: "EmotionAnalyzer")
 
 private struct HaikuResponse: Decodable {
     let content: [ContentBlock]

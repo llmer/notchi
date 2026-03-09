@@ -1,7 +1,7 @@
 import Foundation
 import os.log
 
-private let logger = Logger(subsystem: "com.ruban.notchi", category: "SocketServer")
+private let logger = Logger(subsystem: "com.mps.notchi", category: "SocketServer")
 
 typealias HookEventHandler = @Sendable (HookEvent) -> Void
 
@@ -12,7 +12,7 @@ final class SocketServer {
     private var serverSocket: Int32 = -1
     private var acceptSource: DispatchSourceRead?
     private var eventHandler: HookEventHandler?
-    private let queue = DispatchQueue(label: "com.ruban.notchi.socket", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "com.mps.notchi.socket", qos: .userInitiated)
 
     private init() {}
 
