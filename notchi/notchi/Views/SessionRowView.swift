@@ -65,7 +65,7 @@ struct SessionRowView: View {
         switch session.task {
         case .idle, .sleeping, .waiting:
             return TerminalColors.dimmedText
-        case .working, .compacting:
+        case .working, .compacting, .battle:
             return TerminalColors.amber
         }
     }

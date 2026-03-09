@@ -1,11 +1,12 @@
 import AppKit
 
 enum NotchiTask: String, CaseIterable {
-    case idle, working, sleeping, compacting, waiting
+    case idle, working, sleeping, compacting, waiting, battle
 
     var animationFPS: Double {
         switch self {
         case .compacting: return 6.0
+        case .battle: return 5.0
         case .sleeping: return 2.0
         case .idle, .waiting: return 3.0
         case .working: return 4.0
@@ -20,6 +21,7 @@ enum NotchiTask: String, CaseIterable {
         case .idle, .waiting: return 1.5
         case .working:    return 0.4
         case .compacting: return 0.5
+        case .battle:     return 0.3
         }
     }
 
@@ -29,6 +31,7 @@ enum NotchiTask: String, CaseIterable {
         case .idle:                  return 1.5
         case .waiting:               return 0.5
         case .working:               return 0.5
+        case .battle:                return 1.0
         }
     }
 
@@ -36,7 +39,7 @@ enum NotchiTask: String, CaseIterable {
         switch self {
         case .sleeping, .compacting, .waiting:
             return false
-        case .idle, .working:
+        case .idle, .working, .battle:
             return true
         }
     }
@@ -48,6 +51,7 @@ enum NotchiTask: String, CaseIterable {
         case .sleeping:   return "Sleeping"
         case .compacting: return "Compacting..."
         case .waiting:    return "Waiting..."
+        case .battle:     return "Charging!"
         }
     }
 
@@ -57,20 +61,21 @@ enum NotchiTask: String, CaseIterable {
         case .idle:               return 8.0...15.0
         case .working:            return 5.0...12.0
         case .compacting:         return 15.0...25.0
+        case .battle:             return 3.0...6.0
         }
     }
 
     var frameCount: Int {
         switch self {
         case .compacting: return 5
-        default: return 6
+        case .idle, .working, .sleeping, .waiting, .battle: return 6
         }
     }
 
     var columns: Int {
         switch self {
         case .compacting: return 5
-        default: return 6
+        case .idle, .working, .sleeping, .waiting, .battle: return 6
         }
     }
 }
@@ -123,4 +128,5 @@ struct NotchiState: Equatable {
     static let sleeping = NotchiState(task: .sleeping)
     static let compacting = NotchiState(task: .compacting)
     static let waiting = NotchiState(task: .waiting)
+    static let battle = NotchiState(task: .battle)
 }

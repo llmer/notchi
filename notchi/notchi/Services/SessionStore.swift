@@ -116,6 +116,11 @@ final class SessionStore {
             }
         }
 
+        // Override working → battle when permissions are bypassed
+        if session.permissionMode == "bypassPermissions" && session.task == .working {
+            session.updateTask(.battle)
+        }
+
         return session
     }
 
