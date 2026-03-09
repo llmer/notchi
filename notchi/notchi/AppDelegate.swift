@@ -50,7 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         false
     }
 
-    private func setupNotchWindow() {
+    @MainActor private func setupNotchWindow() {
         ScreenSelector.shared.refreshScreens()
         guard let screen = ScreenSelector.shared.selectedScreen else { return }
         NotchPanelManager.shared.updateGeometry(for: screen)
@@ -87,12 +87,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func repositionWindow() {
-        guard let panel = notchPanel else { return }
-        ScreenSelector.shared.refreshScreens()
-        guard let screen = ScreenSelector.shared.selectedScreen else { return }
+        MainActor.assumeIsolated {
+            guard let panel = notchPanel else { return }
+            ScreenSelector.shared.refreshScreens()
+            guard let screen = ScreenSelector.shared.selectedScreen else { return }
 
-        NotchPanelManager.shared.updateGeometry(for: screen)
-        panel.setFrame(windowFrame(for: screen), display: true)
+            NotchPanelManager.shared.updateGeometry(for: screen)
+            panel.setFrame(windowFrame(for: screen), display: true)
+        }
     }
 
     private func windowFrame(for screen: NSScreen) -> NSRect {
@@ -105,7 +107,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
-    private func startUsageService() {
+    @MainActor private func startUsageService() {
         ClaudeUsageService.shared.startPolling()
     }
 
