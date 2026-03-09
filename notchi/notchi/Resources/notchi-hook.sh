@@ -9,7 +9,7 @@ SOCKET_PATH="/tmp/notchi.sock"
 # Detect the TTY of the parent process (Claude Code)
 HOOK_TTY=$(ps -o tty= -p $PPID 2>/dev/null | tr -d ' ')
 if [ -n "$HOOK_TTY" ] && [ "$HOOK_TTY" != "??" ]; then
-    HOOK_TTY="/dev/tty${HOOK_TTY}"
+    HOOK_TTY="/dev/${HOOK_TTY}"
 else
     HOOK_TTY=""
 fi
