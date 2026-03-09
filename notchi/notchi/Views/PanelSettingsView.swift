@@ -4,6 +4,7 @@ import SwiftUI
 struct PanelSettingsView: View {
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var hooksInstalled = HookInstaller.isInstalled()
+    @State private var clickToFocusTerminal = AppSettings.clickToFocusTerminal
     @State private var hooksError = false
     @State private var apiKeyInput = AppSettings.anthropicApiKey ?? ""
     @ObservedObject private var updateManager = UpdateManager.shared
@@ -63,6 +64,13 @@ struct PanelSettingsView: View {
             Button(action: installHooksIfNeeded) {
                 SettingsRowView(icon: "terminal", title: "Hooks") {
                     statusBadge(hookStatusText, color: hookStatusColor)
+                }
+            }
+            .buttonStyle(.plain)
+
+            Button(action: { AppSettings.clickToFocusTerminal.toggle(); clickToFocusTerminal.toggle() }) {
+                SettingsRowView(icon: "rectangle.topthird.inset.filled", title: "Click to Focus Terminal") {
+                    ToggleSwitch(isOn: clickToFocusTerminal)
                 }
             }
             .buttonStyle(.plain)

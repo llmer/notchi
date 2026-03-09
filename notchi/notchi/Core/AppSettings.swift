@@ -5,10 +5,16 @@ struct AppSettings {
     private static let isMutedKey = "isMuted"
     private static let previousSoundKey = "previousNotificationSound"
     private static let isUsageEnabledKey = "isUsageEnabled"
+    private static let clickToFocusTerminalKey = "clickToFocusTerminal"
 
     static var isUsageEnabled: Bool {
         get { UserDefaults.standard.bool(forKey: isUsageEnabledKey) }
         set { UserDefaults.standard.set(newValue, forKey: isUsageEnabledKey) }
+    }
+
+    static var clickToFocusTerminal: Bool {
+        get { UserDefaults.standard.bool(forKey: clickToFocusTerminalKey) }
+        set { UserDefaults.standard.set(newValue, forKey: clickToFocusTerminalKey) }
     }
 
     static var anthropicApiKey: String? {

@@ -31,6 +31,7 @@ final class SessionData: Identifiable {
     private(set) var lastUserPrompt: String?
     private(set) var promptSubmitTime: Date?
     private(set) var permissionMode: String = "default"
+    private(set) var tty: String?
     private(set) var pendingQuestions: [PendingQuestion] = []
 
     private var durationTimer: Task<Void, Never>?
@@ -134,6 +135,10 @@ final class SessionData: Identifiable {
 
     func updatePermissionMode(_ mode: String) {
         permissionMode = mode
+    }
+
+    func updateTty(_ tty: String) {
+        self.tty = tty
     }
 
     func setPendingQuestions(_ questions: [PendingQuestion]) {

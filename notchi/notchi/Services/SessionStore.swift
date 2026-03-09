@@ -59,6 +59,10 @@ final class SessionStore {
             session.updatePermissionMode(mode)
         }
 
+        if let tty = event.tty {
+            session.updateTty(tty)
+        }
+
         switch event.event {
         case "UserPromptSubmit":
             if let prompt = event.userPrompt {

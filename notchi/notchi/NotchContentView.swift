@@ -86,6 +86,10 @@ struct NotchContentView: View {
                     selectedSessionId: sessionStore.selectedSessionId,
                     hoveredSessionId: $hoveredSessionId,
                     onSelectSession: { sessionId in
+                        if AppSettings.clickToFocusTerminal,
+                           let session = sessionStore.sessions[sessionId] {
+                            TerminalFocusService.focusITermSession(tty: session.tty)
+                        }
                         guard sessionStore.activeSessionCount >= 2 else { return }
                         sessionStore.selectSession(sessionId)
                         showingSessionActivity = true
