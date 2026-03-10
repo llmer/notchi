@@ -154,6 +154,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let contentView = PopOutContentView()
         let hostingView = NSHostingView(rootView: contentView)
+        hostingView.wantsLayer = true
+        hostingView.layer?.backgroundColor = .clear
         panel.contentView = hostingView
         panel.orderFrontRegardless()
 
