@@ -3,90 +3,88 @@ import SwiftUI
 struct SpriteLayoutEngine {
     struct PlacedSprite: Identifiable {
         let sessionId: String
-        let xOffset: CGFloat
-        let yOffset: CGFloat
+        var xOffset: CGFloat
+        var yOffset: CGFloat
         let size: CGFloat
         let depthScale: CGFloat
 
         var id: String { sessionId }
     }
 
-    static func layout(sessions: [SessionData], totalWidth: CGFloat) -> [PlacedSprite] {
+    static func layout(sessions: [SessionData], totalWidth: CGFloat, totalHeight: CGFloat) -> [PlacedSprite] {
         guard !sessions.isEmpty else { return [] }
 
         let sorted = sessions.sorted { $0.sessionStartTime < $1.sessionStartTime }
         let count = sorted.count
-        let usableWidth = totalWidth * 0.8
-        let spriteSize = max(32, min(64, usableWidth / CGFloat(count) * 0.85))
+        let usableWidth = totalWidth * 0.85
 
-        if count <= 5 {
-            return layoutSingleRow(sorted, usableWidth: usableWidth, spriteSize: spriteSize)
-        } else {
-            return layoutTwoRows(sorted, usableWidth: usableWidth, spriteSize: spriteSize)
+        let spriteSize: CGFloat
+        switch count {
+        case 1...3: spriteSize = 64
+        case 4...6: spriteSize = 58
+        case 7...10: spriteSize = 52
+        default: spriteSize = 48
         }
+
+        return layoutScattered(sorted, usableWidth: usableWidth, spriteSize: spriteSize, totalHeight: totalHeight)
     }
 
-    private static func layoutSingleRow(_ sessions: [SessionData], usableWidth: CGFloat, spriteSize: CGFloat) -> [PlacedSprite] {
-        let count = sessions.count
-        let spacing = usableWidth / CGFloat(count + 1)
-        return sessions.enumerated().map { i, session in
-            let baseX = -usableWidth / 2 + spacing * CGFloat(i + 1)
+    private static func layoutScattered(_ sessions: [SessionData], usableWidth: CGFloat, spriteSize: CGFloat, totalHeight: CGFloat) -> [PlacedSprite] {
+        let maxDepth = totalHeight * 0.85
+
+        var placed: [PlacedSprite] = sessions.map { session in
+            let hash = UInt(bitPattern: session.id.hashValue)
+            // Extract different bit ranges for x, depth, jitterX, jitterY
+            let xBits = hash & 0xFFFF
+            let depthBits = (hash >> 16) & 0xFFFF
+            let jitterXBits = (hash >> 32) & 0xFFFF
+            let jitterYBits = (hash >> 48) & 0xFFFF
+
+            let xFraction = CGFloat(xBits) / CGFloat(0xFFFF)
+            let depthFraction = CGFloat(depthBits) / CGFloat(0xFFFF)
+
+            let baseX = -usableWidth / 2 + usableWidth * xFraction
+            let baseY = -(10 + depthFraction * (maxDepth - 10))
+
+            let jitterX = CGFloat(jitterXBits % 17) - 8  // ±8px
+            let jitterY = CGFloat(jitterYBits % 17) - 8  // ±8px
+
+            // Depth scale: front (y ~ -10) = 1.0, back (y ~ -maxDepth) = 0.75
+            let depthNorm = min(1, max(0, (-baseY - 10) / max(1, maxDepth - 10)))
+            let scale = 1.0 - depthNorm * 0.25
+
             return PlacedSprite(
                 sessionId: session.id,
-                xOffset: baseX + jitter(for: session.id),
-                yOffset: -15,
-                size: spriteSize,
-                depthScale: 1.0
+                xOffset: baseX + jitterX,
+                yOffset: baseY + jitterY,
+                size: spriteSize * scale,
+                depthScale: scale
             )
         }
-    }
 
-    private static func layoutTwoRows(_ sessions: [SessionData], usableWidth: CGFloat, spriteSize: CGFloat) -> [PlacedSprite] {
-        var frontSessions: [SessionData] = []
-        var backSessions: [SessionData] = []
-        for (i, session) in sessions.enumerated() {
-            if i % 2 == 0 {
-                frontSessions.append(session)
-            } else {
-                backSessions.append(session)
+        // Repulsion passes to separate overlapping sprites
+        for _ in 0..<3 {
+            for i in 0..<placed.count {
+                for j in (i + 1)..<placed.count {
+                    let dx = placed[i].xOffset - placed[j].xOffset
+                    let dy = placed[i].yOffset - placed[j].yOffset
+                    let dist = sqrt(dx * dx + dy * dy)
+                    let minDist = (placed[i].size + placed[j].size) * 0.45
+                    if dist < minDist && dist > 0.001 {
+                        let push = (minDist - dist) * 0.5
+                        let nx = dx / dist
+                        let ny = dy / dist
+                        placed[i].xOffset += nx * push
+                        placed[i].yOffset += ny * push
+                        placed[j].xOffset -= nx * push
+                        placed[j].yOffset -= ny * push
+                    }
+                }
             }
         }
 
-        var placed: [PlacedSprite] = []
-
-        // Back row first (rendered behind front row)
-        let backSpacing = usableWidth / CGFloat(backSessions.count + 1)
-        let backSize = spriteSize * 0.85
-        for (j, session) in backSessions.enumerated() {
-            let baseX = -usableWidth / 2 + backSpacing * CGFloat(j + 1)
-            placed.append(PlacedSprite(
-                sessionId: session.id,
-                xOffset: baseX + jitter(for: session.id),
-                yOffset: -40,
-                size: backSize,
-                depthScale: 0.85
-            ))
-        }
-
-        // Front row
-        let frontSpacing = usableWidth / CGFloat(frontSessions.count + 1)
-        for (j, session) in frontSessions.enumerated() {
-            let baseX = -usableWidth / 2 + frontSpacing * CGFloat(j + 1)
-            placed.append(PlacedSprite(
-                sessionId: session.id,
-                xOffset: baseX + jitter(for: session.id),
-                yOffset: -10,
-                size: spriteSize,
-                depthScale: 1.0
-            ))
-        }
-
-        return placed
-    }
-
-    private static func jitter(for sessionId: String) -> CGFloat {
-        let hash = UInt(bitPattern: sessionId.hashValue)
-        return CGFloat(hash % 7) - 3
+        // Sort back-to-front (more negative y = further back = render first)
+        return placed.sorted { $0.yOffset < $1.yOffset }
     }
 }
 
@@ -119,7 +117,7 @@ struct GrassIslandView: View {
                 if sessions.isEmpty {
                     GrassSpriteView(state: .idle, xOffset: 0, yOffset: -15, spriteSize: 64, glowOpacity: 0, isVisible: isVisible)
                 } else {
-                    let placed = SpriteLayoutEngine.layout(sessions: sessions, totalWidth: geometry.size.width)
+                    let placed = SpriteLayoutEngine.layout(sessions: sessions, totalWidth: geometry.size.width, totalHeight: geometry.size.height)
                     let sessionById = Dictionary(uniqueKeysWithValues: sessions.map { ($0.id, $0) })
                     ForEach(placed) { sprite in
                         if let session = sessionById[sprite.sessionId] {
@@ -167,7 +165,7 @@ struct GrassTapOverlay: View {
                 Color.clear
 
                 if !sessions.isEmpty {
-                    let placed = SpriteLayoutEngine.layout(sessions: sessions, totalWidth: geometry.size.width)
+                    let placed = SpriteLayoutEngine.layout(sessions: sessions, totalWidth: geometry.size.width, totalHeight: geometry.size.height)
                     ForEach(placed) { sprite in
                         SpriteTapTarget(
                             sessionId: sprite.sessionId,
