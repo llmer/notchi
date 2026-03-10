@@ -73,6 +73,7 @@ struct HookInstaller {
             ("SessionStart", withoutMatcher),
             ("PreToolUse", withMatcher),
             ("PostToolUse", withMatcher),
+            ("PostToolUseFailure", withMatcher),
             ("PermissionRequest", withMatcher),
             ("PreCompact", preCompactConfig),
             ("Stop", withoutMatcher),
@@ -86,7 +87,7 @@ struct HookInstaller {
                     if let entryHooks = entry["hooks"] as? [[String: Any]] {
                         return entryHooks.contains { h in
                             let cmd = h["command"] as? String ?? ""
-                            return cmd.contains("notchi-hook.sh")
+                            return cmd.hasSuffix("/notchi-hook.sh") || cmd == "notchi-hook.sh"
                         }
                     }
                     return false
@@ -111,7 +112,7 @@ struct HookInstaller {
         }
 
         do {
-            try data.write(to: settingsURL)
+            try data.write(to: settingsURL, options: .atomic)
             logger.info("Updated settings.json with Notchi hooks")
             return true
         } catch {
@@ -135,7 +136,8 @@ struct HookInstaller {
             return entries.contains { entry in
                 guard let entryHooks = entry["hooks"] as? [[String: Any]] else { return false }
                 return entryHooks.contains { hook in
-                    (hook["command"] as? String)?.contains("notchi-hook.sh") == true
+                    guard let cmd = hook["command"] as? String else { return false }
+                    return cmd.hasSuffix("/notchi-hook.sh") || cmd == "notchi-hook.sh"
                 }
             }
         }
@@ -162,7 +164,7 @@ struct HookInstaller {
                     if let entryHooks = entry["hooks"] as? [[String: Any]] {
                         return entryHooks.contains { hook in
                             let cmd = hook["command"] as? String ?? ""
-                            return cmd.contains("notchi-hook.sh")
+                            return cmd.hasSuffix("/notchi-hook.sh") || cmd == "notchi-hook.sh"
                         }
                     }
                     return false
@@ -186,7 +188,7 @@ struct HookInstaller {
             withJSONObject: json,
             options: [.prettyPrinted, .sortedKeys]
         ) {
-            try? data.write(to: settings)
+            try? data.write(to: settings, options: .atomic)
         }
 
         logger.info("Uninstalled Notchi hooks")

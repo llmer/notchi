@@ -57,6 +57,10 @@ final class SessionStore {
     }
 
     func process(_ event: HookEvent) -> SessionData {
+        guard !event.sessionId.isEmpty else {
+            logger.warning("Received event with empty sessionId, ignoring")
+            return getOrCreateSession(sessionId: "unknown", cwd: event.cwd)
+        }
         let session = getOrCreateSession(sessionId: event.sessionId, cwd: event.cwd)
         let isProcessing = event.status != "waiting_for_input"
         session.updateProcessingState(isProcessing: isProcessing)
@@ -113,6 +117,14 @@ final class SessionStore {
         case "PostToolUse":
             let success = event.status != "error"
             session.recordPostToolUse(tool: event.tool, toolUseId: event.toolUseId, success: success)
+            if let id = event.toolUseId { session.removeWaitingToolUseId(id) }
+            if !session.isWaitingForUser {
+                session.clearPendingQuestions()
+                session.updateTask(.working)
+            }
+
+        case "PostToolUseFailure":
+            session.recordPostToolUse(tool: event.tool, toolUseId: event.toolUseId, success: false)
             if let id = event.toolUseId { session.removeWaitingToolUseId(id) }
             if !session.isWaitingForUser {
                 session.clearPendingQuestions()
@@ -226,6 +238,9 @@ final class SessionStore {
     private static let localSlashCommands: Set<String> = [
         "/clear", "/help", "/cost", "/status",
         "/vim", "/fast", "/model", "/login", "/logout",
+        "/hooks", "/settings", "/compact", "/resume", "/review",
+        "/init", "/config", "/memory", "/permissions", "/mcp",
+        "/doctor", "/providers", "/listen", "/ide", "/terminal-setup",
     ]
 
     private static func isLocalSlashCommand(_ prompt: String?) -> Bool {

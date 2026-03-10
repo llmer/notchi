@@ -55,8 +55,13 @@ final class NotchiStateMachine {
         case "PermissionRequest":
             SoundService.shared.playNotificationSound()
 
-        case "PostToolUse":
+        case "PostToolUse", "PostToolUseFailure":
             scheduleFileSync(sessionId: event.sessionId, cwd: event.cwd)
+
+        case "PreCompact":
+            // SessionStore already handles the .compacting task transition;
+            // no file watcher or sync needed during compaction.
+            break
 
         case "Stop":
             SoundService.shared.playNotificationSound()

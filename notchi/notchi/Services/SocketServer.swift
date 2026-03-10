@@ -61,7 +61,7 @@ final class SocketServer {
             return
         }
 
-        chmod(Self.socketPath, 0o777)
+        chmod(Self.socketPath, 0o700)
 
         guard listen(serverSocket, 10) == 0 else {
             logger.error("Failed to listen: \(errno)")
@@ -101,8 +101,15 @@ final class SocketServer {
         handleClient(clientSocket)
     }
 
+    private static let maxMessageSize = 1_048_576 // 1MB
+    private static let readTimeoutSeconds: Int = 5
+
     private func handleClient(_ clientSocket: Int32) {
         defer { close(clientSocket) }
+
+        // Set read timeout
+        var timeout = timeval(tv_sec: Self.readTimeoutSeconds, tv_usec: 0)
+        setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
 
         var allData = Data()
         var buffer = [UInt8](repeating: 0, count: 4096)
@@ -111,6 +118,10 @@ final class SocketServer {
             let bytesRead = read(clientSocket, &buffer, buffer.count)
             if bytesRead > 0 {
                 allData.append(contentsOf: buffer[0..<bytesRead])
+                if allData.count > Self.maxMessageSize {
+                    logger.warning("Message exceeded max size (\(Self.maxMessageSize) bytes), dropping")
+                    return
+                }
             } else {
                 break
             }
@@ -140,6 +151,9 @@ final class SocketServer {
             let tool = event.tool ?? "unknown"
             let success = event.status != "error"
             logger.info("Result: \(success ? "✓" : "✗", privacy: .public) \(tool, privacy: .public)")
+        case "PostToolUseFailure":
+            let tool = event.tool ?? "unknown"
+            logger.info("Result: ✗ \(tool, privacy: .public)")
         case "Stop", "SubagentStop":
             logger.info("Done")
         default:

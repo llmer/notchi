@@ -1,7 +1,7 @@
 #!/bin/bash
 # Notchi Hook - forwards Claude Code events to Notchi app via Unix socket
 
-SOCKET_PATH="/tmp/notchi.sock"
+export SOCKET_PATH="/tmp/notchi.sock"
 
 # Exit silently if socket doesn't exist (app not running)
 [ -S "$SOCKET_PATH" ] || exit 0
@@ -9,43 +9,35 @@ SOCKET_PATH="/tmp/notchi.sock"
 # Detect the TTY of the parent process (Claude Code)
 HOOK_TTY=$(ps -o tty= -p $PPID 2>/dev/null | tr -d ' ')
 if [ -n "$HOOK_TTY" ] && [ "$HOOK_TTY" != "??" ]; then
-    HOOK_TTY="/dev/${HOOK_TTY}"
+    export HOOK_TTY="/dev/${HOOK_TTY}"
 else
-    HOOK_TTY=""
+    export HOOK_TTY=""
 fi
 
 # Parse input and send to socket using Python
 /usr/bin/python3 -c "
 import json
+import os
 import socket
 import sys
 
 try:
     input_data = json.load(sys.stdin)
-except:
+except Exception as e:
+    print(f'notchi-hook: failed to parse input: {e}', file=sys.stderr)
     sys.exit(0)
 
 hook_event = input_data.get('hook_event_name', '')
 
-status_map = {
-    'UserPromptSubmit': 'processing',
-    'PreCompact': 'compacting',
-    'SessionStart': 'waiting_for_input',
-    'SessionEnd': 'ended',
-    'PreToolUse': 'running_tool',
-    'PostToolUse': 'processing',
-    'PermissionRequest': 'waiting_for_input',
-    'Stop': 'waiting_for_input',
-    'SubagentStop': 'processing'
-}
+hook_tty = os.environ.get('HOOK_TTY', '')
 
 output = {
     'session_id': input_data.get('session_id', ''),
     'cwd': input_data.get('cwd', ''),
     'event': hook_event,
-    'status': input_data.get('status', status_map.get(hook_event, 'unknown')),
+    'status': input_data.get('status', 'unknown'),
     'pid': None,
-    'tty': '$HOOK_TTY' if '$HOOK_TTY' else None,
+    'tty': hook_tty if hook_tty else None,
     'permission_mode': input_data.get('permission_mode', 'default')
 }
 
@@ -69,9 +61,10 @@ if tool_input:
 
 try:
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    sock.connect('$SOCKET_PATH')
+    sock.connect(os.environ['SOCKET_PATH'])
     sock.sendall(json.dumps(output).encode())
     sock.close()
-except:
-    pass
+except Exception as e:
+    print(f'notchi-hook: socket error: {e}', file=sys.stderr)
+    sys.exit(0)
 "
