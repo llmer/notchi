@@ -19,7 +19,9 @@ struct PopOutContentView: View {
         (sessionStore.activeSessionCount >= 2 && showingSessionActivity)
     }
 
-    private let grassHeight: CGFloat = 140
+    private var grassHeight: CGFloat {
+        isActivityCollapsed ? 300 : 140
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -85,9 +87,6 @@ struct PopOutContentView: View {
 
                 // Expanded panel content
                 VStack(spacing: 0) {
-                    Spacer()
-                        .frame(height: grassHeight * 0.3)
-
                     ExpandedPanelView(
                         sessionStore: sessionStore,
                         usageService: usageService,

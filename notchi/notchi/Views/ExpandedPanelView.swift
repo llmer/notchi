@@ -19,6 +19,56 @@ enum ActivityItem: Identifiable {
     }
 }
 
+struct CollapsibleSectionHeader: View {
+    let isCollapsed: Bool
+    let session: SessionData?
+    let showIndicator: Bool
+    let onToggle: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                onToggle()
+            }
+        }) {
+            HStack(spacing: 6) {
+                Image(systemName: isCollapsed ? "chevron.up" : "chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.5))
+
+                if isCollapsed, let session = session {
+                    Text("\(session.projectName) #\(session.sessionNumber)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(TerminalColors.secondaryText)
+                        .lineLimit(1)
+
+                    if showIndicator {
+                        Circle()
+                            .fill(TerminalColors.green)
+                            .frame(width: 6, height: 6)
+                    }
+
+                    if let mode = session.currentModeDisplay {
+                        Spacer()
+                        ModeBadgeView(mode: mode)
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 28)
+            .frame(maxWidth: .infinity)
+            .background(isHovered ? Color.white.opacity(0.05) : Color.clear)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+}
+
 struct ExpandedPanelView: View {
     let sessionStore: SessionStore
     let usageService: ClaudeUsageService
@@ -84,14 +134,15 @@ struct ExpandedPanelView: View {
     @ViewBuilder
     private func sessionPickerContent(geometry: GeometryProxy) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            if isActivityCollapsed {
-                Spacer()
-                    .allowsHitTesting(false)
-            } else {
-                Spacer()
-                    .frame(height: geometry.size.height * 0.3)
-                    .allowsHitTesting(false)
-            }
+            Spacer()
+                .allowsHitTesting(false)
+
+            CollapsibleSectionHeader(
+                isCollapsed: isActivityCollapsed,
+                session: effectiveSession,
+                showIndicator: showIndicator,
+                onToggle: { isActivityCollapsed.toggle() }
+            )
 
             VStack(alignment: .leading, spacing: 0) {
                 if !isActivityCollapsed {
@@ -116,6 +167,7 @@ struct ExpandedPanelView: View {
                     usage: usageService.currentUsage,
                     isLoading: usageService.isLoading,
                     error: usageService.error,
+                    compact: isActivityCollapsed,
                     onConnect: { ClaudeUsageService.shared.connectAndStartPolling() },
                     onRetry: { ClaudeUsageService.shared.retryNow() }
                 )
@@ -129,30 +181,31 @@ struct ExpandedPanelView: View {
     @ViewBuilder
     private func activityContent(geometry: GeometryProxy) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            if isActivityCollapsed {
-                Spacer()
-                    .allowsHitTesting(false)
-            } else {
-                Spacer()
-                    .frame(height: geometry.size.height * 0.3)
-                    .allowsHitTesting(false)
-            }
+            Spacer()
+                .allowsHitTesting(false)
+
+            CollapsibleSectionHeader(
+                isCollapsed: isActivityCollapsed,
+                session: effectiveSession,
+                showIndicator: showIndicator,
+                onToggle: { isActivityCollapsed.toggle() }
+            )
 
             VStack(alignment: .leading, spacing: 0) {
-                if hasActivity {
-                    Divider().background(Color.white.opacity(0.08))
-                    activitySection
-                } else if !isActivityCollapsed {
-                    Spacer()
-                    emptyState
-                }
-
                 if !isActivityCollapsed {
-                    Spacer()
-                }
+                    if hasActivity {
+                        Divider().background(Color.white.opacity(0.08))
+                        activitySection
+                    } else {
+                        Spacer()
+                        emptyState
+                    }
 
-                if showIndicator && !isActivityCollapsed {
-                    WorkingIndicatorView(state: state)
+                    Spacer()
+
+                    if showIndicator {
+                        WorkingIndicatorView(state: state)
+                    }
                 }
 
                 UsageBarView(
@@ -172,76 +225,70 @@ struct ExpandedPanelView: View {
 
     private var activitySection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if !isActivityCollapsed {
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack {
-                        if let session = effectiveSession {
-                            Text("\(session.projectName) #\(session.sessionNumber)")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(TerminalColors.secondaryText)
-                        }
-
-                        Spacer()
-
-                        if let mode = effectiveSession?.currentModeDisplay {
-                            ModeBadgeView(mode: mode)
-                        }
-                    }
-                    .padding(.top, 8)
-                    .padding(.bottom, 10)
-
-                    ScrollViewReader { proxy in
-                        ScrollView(showsIndicators: false) {
-                            VStack(alignment: .leading, spacing: 0) {
-                                if let prompt = effectiveSession?.lastUserPrompt {
-                                    UserPromptBubbleView(text: prompt)
-                                        .frame(maxWidth: .infinity, alignment: .trailing)
-                                        .padding(.bottom, 8)
-                                }
-
-                                ForEach(unifiedActivityItems) { item in
-                                    switch item {
-                                    case .tool(let event):
-                                        ActivityRowView(event: event)
-                                            .id(item.id)
-                                    case .assistant(let message):
-                                        AssistantTextRowView(message: message)
-                                            .id(item.id)
-                                    }
-                                }
-
-                                let questions = effectiveSession?.pendingQuestions ?? []
-                                if !questions.isEmpty {
-                                    QuestionPromptView(questions: questions)
-                                        .id("question-prompt")
-                                }
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .frame(maxHeight: 200)
-                        .onAppear {
-                            if let lastItem = unifiedActivityItems.last {
-                                proxy.scrollTo(lastItem.id, anchor: .bottom)
-                            }
-                        }
-                        .onChange(of: unifiedActivityItems.last?.id) { _, newId in
-                            if let id = newId {
-                                withAnimation(.easeOut(duration: 0.2)) {
-                                    proxy.scrollTo(id, anchor: .bottom)
-                                }
-                            }
-                        }
-                        .onChange(of: effectiveSession?.pendingQuestions.isEmpty) { _, isEmpty in
-                            if isEmpty == false {
-                                withAnimation(.easeOut(duration: 0.2)) {
-                                    proxy.scrollTo("question-prompt", anchor: .bottom)
-                                }
-                            }
-                        }
-                    }
-
+            HStack {
+                if let session = effectiveSession {
+                    Text("\(session.projectName) #\(session.sessionNumber)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(TerminalColors.secondaryText)
                 }
-                .transition(.opacity)
+
+                Spacer()
+
+                if let mode = effectiveSession?.currentModeDisplay {
+                    ModeBadgeView(mode: mode)
+                }
+            }
+            .padding(.top, 8)
+            .padding(.bottom, 10)
+
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        if let prompt = effectiveSession?.lastUserPrompt {
+                            UserPromptBubbleView(text: prompt)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                                .padding(.bottom, 8)
+                        }
+
+                        ForEach(unifiedActivityItems) { item in
+                            switch item {
+                            case .tool(let event):
+                                ActivityRowView(event: event)
+                                    .id(item.id)
+                            case .assistant(let message):
+                                AssistantTextRowView(message: message)
+                                    .id(item.id)
+                            }
+                        }
+
+                        let questions = effectiveSession?.pendingQuestions ?? []
+                        if !questions.isEmpty {
+                            QuestionPromptView(questions: questions)
+                                .id("question-prompt")
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 200)
+                .onAppear {
+                    if let lastItem = unifiedActivityItems.last {
+                        proxy.scrollTo(lastItem.id, anchor: .bottom)
+                    }
+                }
+                .onChange(of: unifiedActivityItems.last?.id) { _, newId in
+                    if let id = newId {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            proxy.scrollTo(id, anchor: .bottom)
+                        }
+                    }
+                }
+                .onChange(of: effectiveSession?.pendingQuestions.isEmpty) { _, isEmpty in
+                    if isEmpty == false {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            proxy.scrollTo("question-prompt", anchor: .bottom)
+                        }
+                    }
+                }
             }
         }
     }

@@ -52,8 +52,11 @@ struct NotchContentView: View {
     }
 
     private var grassHeight: CGFloat {
-        let expandedPanelHeight = NotchConstants.expandedPanelSize.height - notchSize.height - 24
-        return expandedPanelHeight * 0.3 + notchSize.height
+        let totalHeight = NotchConstants.expandedPanelSize.height - notchSize.height - 24
+        if isActivityCollapsed {
+            return totalHeight - 70 + notchSize.height
+        }
+        return totalHeight * 0.3 + notchSize.height
     }
 
     private var shouldShowBackButton: Bool {
@@ -62,9 +65,7 @@ struct NotchContentView: View {
     }
 
     private var expandedPanelHeight: CGFloat {
-        let fullHeight = NotchConstants.expandedPanelSize.height - notchSize.height - 24
-        let collapsedHeight: CGFloat = 155
-        return isActivityCollapsed ? collapsedHeight : fullHeight
+        NotchConstants.expandedPanelSize.height - notchSize.height - 24
     }
 
     var body: some View {
@@ -98,23 +99,6 @@ struct NotchContentView: View {
                     }
                 )
                 .frame(height: grassHeight, alignment: .bottom)
-            }
-        }
-        .overlay(alignment: .topTrailing) {
-            if isExpanded && !showingPanelSettings {
-                Button(action: {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                        isActivityCollapsed.toggle()
-                    }
-                }) {
-                    Image(systemName: isActivityCollapsed ? "chevron.down" : "chevron.up")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.white.opacity(0.7))
-                        .padding(8)
-                }
-                .buttonStyle(.plain)
-                .offset(y: grassHeight - 30)
-                .padding(.trailing, 30)
             }
         }
         .clipShape(NotchShape(
