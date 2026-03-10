@@ -134,7 +134,8 @@ struct ExpandedPanelView: View {
     @ViewBuilder
     private func sessionPickerContent(geometry: GeometryProxy) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Spacer()
+            Spacer(minLength: 0)
+                .frame(minHeight: geometry.size.height * 0.3)
                 .allowsHitTesting(false)
 
             CollapsibleSectionHeader(
@@ -181,7 +182,8 @@ struct ExpandedPanelView: View {
     @ViewBuilder
     private func activityContent(geometry: GeometryProxy) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Spacer()
+            Spacer(minLength: 0)
+                .frame(minHeight: geometry.size.height * 0.3)
                 .allowsHitTesting(false)
 
             CollapsibleSectionHeader(
