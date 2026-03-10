@@ -36,7 +36,7 @@ status_map = {
     'PostToolUse': 'processing',
     'PermissionRequest': 'waiting_for_input',
     'Stop': 'waiting_for_input',
-    'SubagentStop': 'waiting_for_input'
+    'SubagentStop': 'processing'
 }
 
 output = {

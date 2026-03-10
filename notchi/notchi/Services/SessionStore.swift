@@ -106,9 +106,13 @@ final class SessionStore {
             session.clearPendingQuestions()
             session.updateTask(.working)
 
-        case "Stop", "SubagentStop":
+        case "Stop":
             session.clearPendingQuestions()
             session.updateTask(.idle)
+
+        case "SubagentStop":
+            // Parent agent is still working after subagent finishes
+            break
 
         case "SessionEnd":
             session.endSession()

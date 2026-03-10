@@ -203,7 +203,9 @@ final class SessionData: Identifiable {
         sleepTimer = Task {
             try? await Task.sleep(for: Self.sleepDelay)
             guard !Task.isCancelled else { return }
-            updateTask(.sleeping)
+            if task == .idle {
+                updateTask(.sleeping)
+            }
         }
     }
 

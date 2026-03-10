@@ -105,6 +105,8 @@ final class NotchiStateMachine {
                 return
             }
 
+            session.resetSleepTimer()
+
             if result.interrupted && session.task == .working {
                 session.updateTask(.idle)
                 session.updateProcessingState(isProcessing: false)
