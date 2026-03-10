@@ -77,7 +77,7 @@ struct NotchContentView: View {
         .background {
             ZStack(alignment: .top) {
                 Color.black
-                GrassIslandView(sessions: sessionStore.sortedSessions, selectedSessionId: sessionStore.selectedSessionId, focusedSessionId: sessionStore.focusedSessionId, hoveredSessionId: hoveredSessionId)
+                GrassIslandView(sessions: sessionStore.creationSortedSessions, selectedSessionId: sessionStore.selectedSessionId, focusedSessionId: sessionStore.focusedSessionId, hoveredSessionId: hoveredSessionId)
                     .frame(height: grassHeight, alignment: .bottom)
                     .opacity(isExpanded && !showingPanelSettings ? 1 : 0)
             }
@@ -85,7 +85,7 @@ struct NotchContentView: View {
         .overlay(alignment: .top) {
             if isExpanded && !showingPanelSettings {
                 GrassTapOverlay(
-                    sessions: sessionStore.sortedSessions,
+                    sessions: sessionStore.creationSortedSessions,
                     selectedSessionId: sessionStore.selectedSessionId,
                     hoveredSessionId: $hoveredSessionId,
                     onSelectSession: { sessionId in

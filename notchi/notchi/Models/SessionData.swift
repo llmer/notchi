@@ -16,8 +16,6 @@ final class SessionData: Identifiable {
     let cwd: String
     let sessionNumber: Int
     let sessionStartTime: Date
-    let spriteXPosition: CGFloat
-    let spriteYOffset: CGFloat
 
     private(set) var task: NotchiTask = .idle
     let emotionState = EmotionState()
@@ -81,45 +79,14 @@ final class SessionData: Identifiable {
         return nil
     }
 
-    // Sprite positioning constants (normalized 0..1 range for X, points for Y)
-    private static let xPositionMin: CGFloat = 0.05
-    private static let xPositionRange: CGFloat = 0.90
-    private static let xMinSeparation: CGFloat = 0.15
-    private static let xCollisionRetries = 10
-    private static let xNudgeStep: CGFloat = 0.23
-
-    private static let yOffsetBase: CGFloat = -5.0
-    private static let yOffsetRange: UInt = 51
-
-    init(sessionId: String, cwd: String, sessionNumber: Int, existingXPositions: [CGFloat] = []) {
+    init(sessionId: String, cwd: String, sessionNumber: Int) {
         self.id = sessionId
         self.cwd = cwd
         self.sessionNumber = sessionNumber
         self.sessionStartTime = Date()
         self.lastActivity = Date()
 
-        let hash = UInt(bitPattern: sessionId.hashValue)
-        self.spriteXPosition = Self.resolveXPosition(hash: hash, existingPositions: existingXPositions)
-        self.spriteYOffset = Self.resolveYOffset(hash: hash)
-
         startDurationTimer()
-    }
-
-    private static func resolveXPosition(hash: UInt, existingPositions: [CGFloat]) -> CGFloat {
-        var candidate = xPositionMin + CGFloat(hash % 900) / 1000.0
-
-        for _ in 0..<xCollisionRetries {
-            let tooClose = existingPositions.contains { abs($0 - candidate) < xMinSeparation }
-            if !tooClose { break }
-            candidate = (candidate + xNudgeStep).truncatingRemainder(dividingBy: xPositionRange) + xPositionMin
-        }
-
-        return candidate
-    }
-
-    private static func resolveYOffset(hash: UInt) -> CGFloat {
-        let yBits = (hash >> 8) & 0xFF
-        return yOffsetBase - CGFloat(yBits % yOffsetRange)
     }
 
     func updateTask(_ newTask: NotchiTask) {

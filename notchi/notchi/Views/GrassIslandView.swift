@@ -1,18 +1,92 @@
 import SwiftUI
 
-private enum SpriteLayout {
-    static let size: CGFloat = 64
-    static let usableWidthFraction: CGFloat = 0.8
-    static let leftMarginFraction: CGFloat = 0.1
+struct SpriteLayoutEngine {
+    struct PlacedSprite: Identifiable {
+        let sessionId: String
+        let xOffset: CGFloat
+        let yOffset: CGFloat
+        let size: CGFloat
+        let depthScale: CGFloat
 
-    static func xOffset(xPosition: CGFloat, totalWidth: CGFloat) -> CGFloat {
-        let usableWidth = totalWidth * usableWidthFraction
-        let leftMargin = totalWidth * leftMarginFraction
-        return leftMargin + (xPosition * usableWidth) - (totalWidth / 2)
+        var id: String { sessionId }
     }
 
-    static func depthSorted(_ sessions: [SessionData]) -> [SessionData] {
-        sessions.sorted { $0.spriteYOffset < $1.spriteYOffset }
+    static func layout(sessions: [SessionData], totalWidth: CGFloat) -> [PlacedSprite] {
+        guard !sessions.isEmpty else { return [] }
+
+        let sorted = sessions.sorted { $0.sessionStartTime < $1.sessionStartTime }
+        let count = sorted.count
+        let usableWidth = totalWidth * 0.8
+        let spriteSize = max(32, min(64, usableWidth / CGFloat(count) * 0.85))
+
+        if count <= 5 {
+            return layoutSingleRow(sorted, usableWidth: usableWidth, spriteSize: spriteSize)
+        } else {
+            return layoutTwoRows(sorted, usableWidth: usableWidth, spriteSize: spriteSize)
+        }
+    }
+
+    private static func layoutSingleRow(_ sessions: [SessionData], usableWidth: CGFloat, spriteSize: CGFloat) -> [PlacedSprite] {
+        let count = sessions.count
+        let spacing = usableWidth / CGFloat(count + 1)
+        return sessions.enumerated().map { i, session in
+            let baseX = -usableWidth / 2 + spacing * CGFloat(i + 1)
+            return PlacedSprite(
+                sessionId: session.id,
+                xOffset: baseX + jitter(for: session.id),
+                yOffset: -15,
+                size: spriteSize,
+                depthScale: 1.0
+            )
+        }
+    }
+
+    private static func layoutTwoRows(_ sessions: [SessionData], usableWidth: CGFloat, spriteSize: CGFloat) -> [PlacedSprite] {
+        var frontSessions: [SessionData] = []
+        var backSessions: [SessionData] = []
+        for (i, session) in sessions.enumerated() {
+            if i % 2 == 0 {
+                frontSessions.append(session)
+            } else {
+                backSessions.append(session)
+            }
+        }
+
+        var placed: [PlacedSprite] = []
+
+        // Back row first (rendered behind front row)
+        let backSpacing = usableWidth / CGFloat(backSessions.count + 1)
+        let backSize = spriteSize * 0.85
+        for (j, session) in backSessions.enumerated() {
+            let baseX = -usableWidth / 2 + backSpacing * CGFloat(j + 1)
+            placed.append(PlacedSprite(
+                sessionId: session.id,
+                xOffset: baseX + jitter(for: session.id),
+                yOffset: -40,
+                size: backSize,
+                depthScale: 0.85
+            ))
+        }
+
+        // Front row
+        let frontSpacing = usableWidth / CGFloat(frontSessions.count + 1)
+        for (j, session) in frontSessions.enumerated() {
+            let baseX = -usableWidth / 2 + frontSpacing * CGFloat(j + 1)
+            placed.append(PlacedSprite(
+                sessionId: session.id,
+                xOffset: baseX + jitter(for: session.id),
+                yOffset: -10,
+                size: spriteSize,
+                depthScale: 1.0
+            ))
+        }
+
+        return placed
+    }
+
+    private static func jitter(for sessionId: String) -> CGFloat {
+        let hash = UInt(bitPattern: sessionId.hashValue)
+        return CGFloat(hash % 7) - 3
     }
 }
 
@@ -42,16 +116,19 @@ struct GrassIslandView: View {
                 .drawingGroup()
 
                 if sessions.isEmpty {
-                    GrassSpriteView(state: .idle, xPosition: 0.5, yOffset: -15, totalWidth: geometry.size.width, glowOpacity: 0)
+                    GrassSpriteView(state: .idle, xOffset: 0, yOffset: -15, spriteSize: 64, glowOpacity: 0)
                 } else {
-                    ForEach(SpriteLayout.depthSorted(sessions)) { session in
-                        GrassSpriteView(
-                            state: session.state,
-                            xPosition: session.spriteXPosition,
-                            yOffset: session.spriteYOffset,
-                            totalWidth: geometry.size.width,
-                            glowOpacity: glowOpacity(for: session.id)
-                        )
+                    let placed = SpriteLayoutEngine.layout(sessions: sessions, totalWidth: geometry.size.width)
+                    ForEach(placed) { sprite in
+                        if let session = sessions.first(where: { $0.id == sprite.sessionId }) {
+                            GrassSpriteView(
+                                state: session.state,
+                                xOffset: sprite.xOffset,
+                                yOffset: sprite.yOffset,
+                                spriteSize: sprite.size,
+                                glowOpacity: glowOpacity(for: session.id)
+                            )
+                        }
                     }
                 }
             }
@@ -87,14 +164,15 @@ struct GrassTapOverlay: View {
                 Color.clear
 
                 if !sessions.isEmpty {
-                    ForEach(SpriteLayout.depthSorted(sessions)) { session in
+                    let placed = SpriteLayoutEngine.layout(sessions: sessions, totalWidth: geometry.size.width)
+                    ForEach(placed) { sprite in
                         SpriteTapTarget(
-                            sessionId: session.id,
-                            xPosition: session.spriteXPosition,
-                            yOffset: session.spriteYOffset,
-                            totalWidth: geometry.size.width,
+                            sessionId: sprite.sessionId,
+                            xOffset: sprite.xOffset,
+                            yOffset: sprite.yOffset,
+                            spriteSize: sprite.size,
                             hoveredSessionId: $hoveredSessionId,
-                            onTap: { onSelectSession?(session.id) }
+                            onTap: { onSelectSession?(sprite.sessionId) }
                         )
                     }
                 }
@@ -114,9 +192,9 @@ private struct NoHighlightButtonStyle: ButtonStyle {
 
 private struct SpriteTapTarget: View {
     let sessionId: String
-    let xPosition: CGFloat
+    let xOffset: CGFloat
     let yOffset: CGFloat
-    let totalWidth: CGFloat
+    let spriteSize: CGFloat
     @Binding var hoveredSessionId: String?
     var onTap: (() -> Void)?
 
@@ -125,7 +203,7 @@ private struct SpriteTapTarget: View {
     var body: some View {
         Button(action: handleTap) {
             Color.clear
-                .frame(width: SpriteLayout.size, height: SpriteLayout.size)
+                .frame(width: spriteSize, height: spriteSize)
                 .contentShape(Rectangle())
         }
         .buttonStyle(NoHighlightButtonStyle())
@@ -133,7 +211,9 @@ private struct SpriteTapTarget: View {
             hoveredSessionId = hovering ? sessionId : nil
         }
         .scaleEffect(tapScale)
-        .offset(x: SpriteLayout.xOffset(xPosition: xPosition, totalWidth: totalWidth), y: yOffset)
+        .offset(x: xOffset, y: yOffset)
+        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: xOffset)
+        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: yOffset)
     }
 
     private func handleTap() {
@@ -148,9 +228,9 @@ private struct SpriteTapTarget: View {
 
 private struct GrassSpriteView: View {
     let state: NotchiState
-    let xPosition: CGFloat
+    let xOffset: CGFloat
     let yOffset: CGFloat
-    let totalWidth: CGFloat
+    let spriteSize: CGFloat
     var glowOpacity: Double = 0
 
     private let swayDuration: Double = 2.0
@@ -194,21 +274,25 @@ private struct GrassSpriteView: View {
                 fps: state.animationFPS,
                 isAnimating: true
             )
-            .frame(width: SpriteLayout.size, height: SpriteLayout.size)
+            .frame(width: spriteSize, height: spriteSize)
             .background(alignment: .bottom) {
                 if glowOpacity > 0 {
                     Ellipse()
                         .fill(rainbowGlowColor(at: timeline.date).opacity(glowOpacity))
-                        .frame(width: SpriteLayout.size * 0.9, height: SpriteLayout.size * 0.3)
+                        .frame(width: spriteSize * 0.9, height: spriteSize * 0.3)
                         .blur(radius: 10)
                         .offset(y: 4)
                 }
             }
             .rotationEffect(.degrees(swayDegrees(at: timeline.date)), anchor: .bottom)
             .offset(
-                x: SpriteLayout.xOffset(xPosition: xPosition, totalWidth: totalWidth) + trembleOffset(at: timeline.date, amplitude: state.emotion == .sob ? Self.sobTrembleAmplitude : 0),
-                y: yOffset + bobOffset(at: timeline.date, duration: bobDuration, amplitude: bobAmplitude)
+                x: trembleOffset(at: timeline.date, amplitude: state.emotion == .sob ? Self.sobTrembleAmplitude : 0),
+                y: bobOffset(at: timeline.date, duration: bobDuration, amplitude: bobAmplitude)
             )
         }
+        .offset(x: xOffset, y: yOffset)
+        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: xOffset)
+        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: yOffset)
+        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: spriteSize)
     }
 }

@@ -58,7 +58,7 @@ struct PopOutContentView: View {
             ZStack(alignment: .top) {
                 // Grass background
                 GrassIslandView(
-                    sessions: sessionStore.sortedSessions,
+                    sessions: sessionStore.creationSortedSessions,
                     selectedSessionId: sessionStore.selectedSessionId,
                     focusedSessionId: sessionStore.focusedSessionId,
                     hoveredSessionId: hoveredSessionId
@@ -69,7 +69,7 @@ struct PopOutContentView: View {
                 // Tap overlay for sprites
                 if !showingPanelSettings {
                     GrassTapOverlay(
-                        sessions: sessionStore.sortedSessions,
+                        sessions: sessionStore.creationSortedSessions,
                         selectedSessionId: sessionStore.selectedSessionId,
                         hoveredSessionId: $hoveredSessionId,
                         onSelectSession: { sessionId in

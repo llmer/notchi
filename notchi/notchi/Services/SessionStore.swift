@@ -24,6 +24,10 @@ final class SessionStore {
         }
     }
 
+    var creationSortedSessions: [SessionData] {
+        sessions.values.sorted { $0.sessionStartTime < $1.sessionStartTime }
+    }
+
     var activeSessionCount: Int {
         sessions.count
     }
@@ -185,8 +189,7 @@ final class SessionStore {
         let projectName = (cwd as NSString).lastPathComponent
         let sessionNumber = nextSessionNumberByProject[projectName, default: 0] + 1
         nextSessionNumberByProject[projectName] = sessionNumber
-        let existingXPositions = sessions.values.map(\.spriteXPosition)
-        let session = SessionData(sessionId: sessionId, cwd: cwd, sessionNumber: sessionNumber, existingXPositions: existingXPositions)
+        let session = SessionData(sessionId: sessionId, cwd: cwd, sessionNumber: sessionNumber)
         sessions[sessionId] = session
         logger.info("Created session #\(sessionNumber): \(sessionId, privacy: .public) at \(cwd, privacy: .public)")
 
