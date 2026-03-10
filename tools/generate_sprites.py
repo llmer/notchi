@@ -118,6 +118,55 @@ def draw_sword(frame: Image.Image, x: int, y: int, angle_deg: float) -> Image.Im
     return result
 
 
+def draw_wave_arm(frame: Image.Image, angle_deg: float) -> Image.Image:
+    """
+    Draw a small waving arm on the upper-right side of the character.
+
+    The arm is orange (sampled from character body color), 2px wide, ~7px long,
+    with a lighter orange tip for the hand. Rotated to the given angle.
+    """
+    # Find character bounds to position the arm
+    alpha = frame.split()[3]
+    bbox = alpha.getbbox()
+    if bbox is None:
+        bbox = (16, 16, 48, 48)
+
+    # Arm origin: upper-right area of the character body
+    arm_x = bbox[2] - 2  # near right edge
+    arm_y = bbox[1] + (bbox[3] - bbox[1]) // 3  # upper third
+
+    # Draw arm on a temporary canvas
+    canvas_size = 32
+    arm_img = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(arm_img)
+
+    cx, cy = canvas_size // 2, canvas_size // 2
+
+    # Arm colors — orange sampled from character body
+    arm_color = (227, 142, 68, 255)
+    hand_color = (245, 180, 100, 255)  # lighter orange tip
+
+    # Arm shaft: 2px wide, 7px long going upward from center
+    draw.rectangle([cx - 1, cy - 7, cx, cy], fill=arm_color)
+
+    # Hand: lighter tip at the end
+    draw.rectangle([cx - 1, cy - 9, cx, cy - 7], fill=hand_color)
+
+    # Rotate around center
+    rotated = arm_img.rotate(angle_deg, resample=Image.BICUBIC, expand=False, center=(cx, cy))
+
+    # Composite onto frame
+    result = frame.copy()
+    paste_x = arm_x - cx
+    paste_y = arm_y - cy
+    # Clamp to frame bounds
+    paste_x = max(-canvas_size + 1, min(paste_x, FRAME_SIZE - 1))
+    paste_y = max(-canvas_size + 1, min(paste_y, FRAME_SIZE - 1))
+    result.alpha_composite(rotated, (paste_x, paste_y))
+
+    return result
+
+
 def find_character_bbox(frame: Image.Image) -> tuple[int, int, int, int]:
     """Find the bounding box of non-transparent pixels in a frame."""
     # Get alpha channel
@@ -180,8 +229,43 @@ def cmd_battle() -> None:
     print("Done! Generated battle_neutral and battle_happy sprite sheets.")
 
 
+def generate_goodbye(base_name: str, output_name: str) -> None:
+    """Generate a goodbye sprite sheet with a waving arm from a base idle sprite sheet."""
+    print(f"  Loading base: {base_name}")
+    sheet = load_spritesheet(base_name)
+    frames = extract_frames(sheet)
+
+    # Wave arm angles — oscillating back-and-forth wave across 6 frames
+    wave_angles = [45, 65, 40, 70, 45, 60]
+
+    goodbye_frames = []
+    for i, frame in enumerate(frames):
+        goodbye_frame = draw_wave_arm(frame, wave_angles[i])
+        goodbye_frames.append(goodbye_frame)
+
+    goodbye_sheet = compose_spritesheet(goodbye_frames)
+    out_dir = write_imageset(output_name, goodbye_sheet)
+    print(f"  Written: {out_dir}")
+
+
+def cmd_goodbye() -> None:
+    """Generate goodbye sprite sheets from idle sprites."""
+    print("Generating goodbye sprites...")
+
+    variants = [
+        ("idle_neutral", "goodbye_neutral"),
+        ("idle_happy", "goodbye_happy"),
+    ]
+
+    for base, output in variants:
+        generate_goodbye(base, output)
+
+    print("Done! Generated goodbye_neutral and goodbye_happy sprite sheets.")
+
+
 COMMANDS = {
     "battle": cmd_battle,
+    "goodbye": cmd_goodbye,
 }
 
 

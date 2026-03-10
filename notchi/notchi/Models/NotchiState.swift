@@ -1,14 +1,14 @@
 import AppKit
 
 enum NotchiTask: String, CaseIterable {
-    case idle, working, sleeping, compacting, waiting, battle
+    case idle, working, sleeping, compacting, waiting, battle, goodbye
 
     var animationFPS: Double {
         switch self {
         case .compacting: return 6.0
         case .battle: return 5.0
         case .sleeping: return 2.0
-        case .idle, .waiting: return 3.0
+        case .idle, .waiting, .goodbye: return 3.0
         case .working: return 4.0
         }
     }
@@ -19,6 +19,7 @@ enum NotchiTask: String, CaseIterable {
         switch self {
         case .sleeping:   return 4.0
         case .idle, .waiting: return 1.5
+        case .goodbye:    return 2.0
         case .working:    return 0.4
         case .compacting: return 0.5
         case .battle:     return 0.3
@@ -30,6 +31,7 @@ enum NotchiTask: String, CaseIterable {
         case .sleeping, .compacting: return 0
         case .idle:                  return 1.5
         case .waiting:               return 0.5
+        case .goodbye:               return 1.0
         case .working:               return 0.5
         case .battle:                return 1.0
         }
@@ -37,7 +39,7 @@ enum NotchiTask: String, CaseIterable {
 
     var canWalk: Bool {
         switch self {
-        case .sleeping, .compacting, .waiting:
+        case .sleeping, .compacting, .waiting, .goodbye:
             return false
         case .idle, .working, .battle:
             return true
@@ -52,12 +54,13 @@ enum NotchiTask: String, CaseIterable {
         case .compacting: return "Compacting..."
         case .waiting:    return "Waiting..."
         case .battle:     return "Charging!"
+        case .goodbye:    return "Goodbye!"
         }
     }
 
     var walkFrequencyRange: ClosedRange<Double> {
         switch self {
-        case .sleeping, .waiting: return 30.0...60.0
+        case .sleeping, .waiting, .goodbye: return 30.0...60.0
         case .idle:               return 8.0...15.0
         case .working:            return 5.0...12.0
         case .compacting:         return 15.0...25.0
@@ -68,14 +71,14 @@ enum NotchiTask: String, CaseIterable {
     var frameCount: Int {
         switch self {
         case .compacting: return 5
-        case .idle, .working, .sleeping, .waiting, .battle: return 6
+        case .idle, .working, .sleeping, .waiting, .battle, .goodbye: return 6
         }
     }
 
     var columns: Int {
         switch self {
         case .compacting: return 5
-        case .idle, .working, .sleeping, .waiting, .battle: return 6
+        case .idle, .working, .sleeping, .waiting, .battle, .goodbye: return 6
         }
     }
 }
@@ -129,4 +132,5 @@ struct NotchiState: Equatable {
     static let compacting = NotchiState(task: .compacting)
     static let waiting = NotchiState(task: .waiting)
     static let battle = NotchiState(task: .battle)
+    static let goodbye = NotchiState(task: .goodbye)
 }

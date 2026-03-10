@@ -11,6 +11,7 @@ final class SessionStore {
     private(set) var sessions: [String: SessionData] = [:]
     private(set) var selectedSessionId: String?
     private var nextSessionNumberByProject: [String: Int] = [:]
+    private var goodbyeTimers: [String: Task<Void, Never>] = [:]
 
     private init() {}
 
@@ -116,7 +117,8 @@ final class SessionStore {
 
         case "SessionEnd":
             session.endSession()
-            removeSession(event.sessionId)
+            session.updateTask(.goodbye)
+            scheduleGoodbyeRemoval(event.sessionId)
 
         default:
             if !isProcessing && session.task != .idle {
@@ -137,8 +139,21 @@ final class SessionStore {
         session.recordAssistantMessages(messages)
     }
 
+    private func scheduleGoodbyeRemoval(_ sessionId: String) {
+        guard goodbyeTimers[sessionId] == nil else { return }
+        goodbyeTimers[sessionId] = Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            guard !Task.isCancelled else { return }
+            removeSession(sessionId)
+            goodbyeTimers.removeValue(forKey: sessionId)
+        }
+    }
+
     private func getOrCreateSession(sessionId: String, cwd: String) -> SessionData {
         if let existing = sessions[sessionId] {
+            if let timer = goodbyeTimers.removeValue(forKey: sessionId) {
+                timer.cancel()
+            }
             return existing
         }
 
@@ -173,6 +188,8 @@ final class SessionStore {
     }
 
     func dismissSession(_ sessionId: String) {
+        goodbyeTimers[sessionId]?.cancel()
+        goodbyeTimers.removeValue(forKey: sessionId)
         sessions[sessionId]?.endSession()
         removeSession(sessionId)
     }
