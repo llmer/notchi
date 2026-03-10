@@ -120,46 +120,52 @@ def draw_sword(frame: Image.Image, x: int, y: int, angle_deg: float) -> Image.Im
 
 def draw_wave_arm(frame: Image.Image, angle_deg: float) -> Image.Image:
     """
-    Draw a small waving arm on the upper-right side of the character.
+    Draw a visible waving arm extending from the upper-right side of the character.
 
-    The arm is orange (sampled from character body color), 2px wide, ~7px long,
-    with a lighter orange tip for the hand. Rotated to the given angle.
+    Uses a dark outline and lighter fill so the arm is clearly distinct from
+    the orange body, similar to how the sword contrasts in battle sprites.
+    The arm pivots from the body edge and extends outward.
     """
-    # Find character bounds to position the arm
     alpha = frame.split()[3]
     bbox = alpha.getbbox()
     if bbox is None:
         bbox = (16, 16, 48, 48)
 
-    # Arm origin: upper-right area of the character body
-    arm_x = bbox[2] - 2  # near right edge
-    arm_y = bbox[1] + (bbox[3] - bbox[1]) // 3  # upper third
+    # Arm pivot: at the right edge of the body, upper third
+    arm_x = bbox[2]
+    arm_y = bbox[1] + (bbox[3] - bbox[1]) // 3
 
-    # Draw arm on a temporary canvas
+    # Draw arm on a temporary canvas, pivot at center
     canvas_size = 32
     arm_img = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(arm_img)
 
     cx, cy = canvas_size // 2, canvas_size // 2
 
-    # Arm colors — orange sampled from character body
-    arm_color = (227, 142, 68, 255)
-    hand_color = (245, 180, 100, 255)  # lighter orange tip
+    # Colors — dark outline makes the arm pop against the orange body
+    outline_color = (80, 50, 20, 255)       # dark brown outline
+    arm_color = (227, 142, 68, 255)         # orange fill matching body
+    hand_color = (245, 200, 130, 255)       # lighter hand/mitten
 
-    # Arm shaft: 2px wide, 7px long going upward from center
-    draw.rectangle([cx - 1, cy - 7, cx, cy], fill=arm_color)
+    # Arm shaft with outline: 3px wide arm going upward from pivot
+    # Outline first (4px wide)
+    draw.rectangle([cx - 2, cy - 9, cx + 1, cy], fill=outline_color)
+    # Fill (2px wide, inset)
+    draw.rectangle([cx - 1, cy - 8, cx, cy], fill=arm_color)
 
-    # Hand: lighter tip at the end
-    draw.rectangle([cx - 1, cy - 9, cx, cy - 7], fill=hand_color)
+    # Hand/mitten at tip: wider than arm for visibility
+    # Outline
+    draw.rectangle([cx - 3, cy - 13, cx + 2, cy - 9], fill=outline_color)
+    # Fill
+    draw.rectangle([cx - 2, cy - 12, cx + 1, cy - 10], fill=hand_color)
 
-    # Rotate around center
+    # Rotate around pivot point (center of canvas)
     rotated = arm_img.rotate(angle_deg, resample=Image.BICUBIC, expand=False, center=(cx, cy))
 
     # Composite onto frame
     result = frame.copy()
     paste_x = arm_x - cx
     paste_y = arm_y - cy
-    # Clamp to frame bounds
     paste_x = max(-canvas_size + 1, min(paste_x, FRAME_SIZE - 1))
     paste_y = max(-canvas_size + 1, min(paste_y, FRAME_SIZE - 1))
     result.alpha_composite(rotated, (paste_x, paste_y))
@@ -235,8 +241,8 @@ def generate_goodbye(base_name: str, output_name: str) -> None:
     sheet = load_spritesheet(base_name)
     frames = extract_frames(sheet)
 
-    # Wave arm angles — oscillating back-and-forth wave across 6 frames
-    wave_angles = [45, 65, 40, 70, 45, 60]
+    # Wave arm angles — wide oscillation for a visible back-and-forth wave
+    wave_angles = [20, 70, 10, 75, 25, 65]
 
     goodbye_frames = []
     for i, frame in enumerate(frames):
