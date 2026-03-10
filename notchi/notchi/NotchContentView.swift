@@ -68,6 +68,10 @@ struct NotchContentView: View {
         NotchConstants.expandedPanelSize.height - notchSize.height - 24
     }
 
+    private var contentTopInset: CGFloat {
+        grassHeight - notchSize.height
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             notchLayout
@@ -141,7 +145,8 @@ struct NotchContentView: View {
                         usageService: usageService,
                         showingSettings: $showingPanelSettings,
                         showingSessionActivity: $showingSessionActivity,
-                        isActivityCollapsed: $isActivityCollapsed
+                        isActivityCollapsed: $isActivityCollapsed,
+                        contentTopInset: contentTopInset
                     )
                     .frame(
                         width: NotchConstants.expandedPanelSize.width - 48,

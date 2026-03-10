@@ -76,6 +76,7 @@ struct ExpandedPanelView: View {
     @Binding var showingSettings: Bool
     @Binding var showingSessionActivity: Bool
     @Binding var isActivityCollapsed: Bool
+    let contentTopInset: CGFloat
 
     private var effectiveSession: SessionData? {
         sessionStore.effectiveSession
@@ -136,9 +137,7 @@ struct ExpandedPanelView: View {
     private func sessionPickerContent(geometry: GeometryProxy) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Color.clear
-                .frame(height: isActivityCollapsed
-                    ? geometry.size.height - 70
-                    : geometry.size.height * 0.3)
+                .frame(height: contentTopInset)
                 .allowsHitTesting(false)
 
             CollapsibleSectionHeader(
@@ -186,9 +185,7 @@ struct ExpandedPanelView: View {
     private func activityContent(geometry: GeometryProxy) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Color.clear
-                .frame(height: isActivityCollapsed
-                    ? geometry.size.height - 70
-                    : geometry.size.height * 0.3)
+                .frame(height: contentTopInset)
                 .allowsHitTesting(false)
 
             CollapsibleSectionHeader(

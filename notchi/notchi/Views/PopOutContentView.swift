@@ -23,6 +23,10 @@ struct PopOutContentView: View {
         isActivityCollapsed ? 300 : 140
     }
 
+    private var contentTopInset: CGFloat {
+        isActivityCollapsed ? grassHeight : grassHeight + 8
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Custom titlebar
@@ -93,7 +97,8 @@ struct PopOutContentView: View {
                         usageService: usageService,
                         showingSettings: $showingPanelSettings,
                         showingSessionActivity: $showingSessionActivity,
-                        isActivityCollapsed: $isActivityCollapsed
+                        isActivityCollapsed: $isActivityCollapsed,
+                        contentTopInset: contentTopInset
                     )
                 }
             }
