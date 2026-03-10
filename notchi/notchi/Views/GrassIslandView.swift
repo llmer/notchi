@@ -97,6 +97,7 @@ struct GrassIslandView: View {
     var selectedSessionId: String?
     var focusedSessionId: String?
     var hoveredSessionId: String?
+    var isVisible: Bool = true
 
     private let patchWidth: CGFloat = 80
 
@@ -116,7 +117,7 @@ struct GrassIslandView: View {
                 .drawingGroup()
 
                 if sessions.isEmpty {
-                    GrassSpriteView(state: .idle, xOffset: 0, yOffset: -15, spriteSize: 64, glowOpacity: 0)
+                    GrassSpriteView(state: .idle, xOffset: 0, yOffset: -15, spriteSize: 64, glowOpacity: 0, isVisible: isVisible)
                 } else {
                     let placed = SpriteLayoutEngine.layout(sessions: sessions, totalWidth: geometry.size.width)
                     let sessionById = Dictionary(uniqueKeysWithValues: sessions.map { ($0.id, $0) })
@@ -127,7 +128,8 @@ struct GrassIslandView: View {
                                 xOffset: sprite.xOffset,
                                 yOffset: sprite.yOffset,
                                 spriteSize: sprite.size,
-                                glowOpacity: glowOpacity(for: session.id)
+                                glowOpacity: glowOpacity(for: session.id),
+                                isVisible: isVisible
                             )
                         }
                     }
@@ -233,6 +235,7 @@ private struct GrassSpriteView: View {
     let yOffset: CGFloat
     let spriteSize: CGFloat
     var glowOpacity: Double = 0
+    var isVisible: Bool = true
 
     private let swayDuration: Double = 2.0
     private var bobAmplitude: CGFloat {
@@ -250,7 +253,7 @@ private struct GrassSpriteView: View {
     }
 
     private var isAnimatingMotion: Bool {
-        bobAmplitude > 0 || swayAmplitude > 0 || state.emotion == .sob || glowOpacity > 0
+        isVisible && (bobAmplitude > 0 || swayAmplitude > 0 || state.emotion == .sob || glowOpacity > 0)
     }
 
     private var bobDuration: Double {
