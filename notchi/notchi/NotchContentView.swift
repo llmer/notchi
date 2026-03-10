@@ -77,9 +77,11 @@ struct NotchContentView: View {
         .background {
             ZStack(alignment: .top) {
                 Color.black
-                GrassIslandView(sessions: sessionStore.creationSortedSessions, selectedSessionId: sessionStore.selectedSessionId, focusedSessionId: sessionStore.focusedSessionId, hoveredSessionId: hoveredSessionId)
-                    .frame(height: grassHeight, alignment: .bottom)
-                    .opacity(isExpanded && !showingPanelSettings ? 1 : 0)
+                if isExpanded && !showingPanelSettings {
+                    GrassIslandView(sessions: sessionStore.creationSortedSessions, selectedSessionId: sessionStore.selectedSessionId, focusedSessionId: sessionStore.focusedSessionId, hoveredSessionId: hoveredSessionId)
+                        .frame(height: grassHeight, alignment: .bottom)
+                        .transition(.opacity)
+                }
             }
         }
         .overlay(alignment: .top) {

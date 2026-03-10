@@ -101,7 +101,25 @@ struct NotchiState: Equatable {
     var emotion: NotchiEmotion = .neutral
 
     /// Resolves the sprite sheet name with fallback chain: exact emotion -> sad (for sob) -> neutral.
+    /// Results are cached in a static dictionary (max 28 entries: 7 tasks × 4 emotions).
     var spriteSheetName: String {
+        let key = SpriteSheetKey(task: task, emotion: emotion)
+        if let cached = Self.spriteSheetCache[key] {
+            return cached
+        }
+        let resolved = Self.resolveSpriteSheetName(task: task, emotion: emotion)
+        Self.spriteSheetCache[key] = resolved
+        return resolved
+    }
+
+    private struct SpriteSheetKey: Hashable {
+        let task: NotchiTask
+        let emotion: NotchiEmotion
+    }
+
+    nonisolated(unsafe) private static var spriteSheetCache: [SpriteSheetKey: String] = [:]
+
+    private static func resolveSpriteSheetName(task: NotchiTask, emotion: NotchiEmotion) -> String {
         let name = "\(task.spritePrefix)_\(emotion.rawValue)"
         if NSImage(named: name) != nil { return name }
         if emotion == .sob {

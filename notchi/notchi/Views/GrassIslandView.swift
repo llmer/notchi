@@ -119,8 +119,9 @@ struct GrassIslandView: View {
                     GrassSpriteView(state: .idle, xOffset: 0, yOffset: -15, spriteSize: 64, glowOpacity: 0)
                 } else {
                     let placed = SpriteLayoutEngine.layout(sessions: sessions, totalWidth: geometry.size.width)
+                    let sessionById = Dictionary(uniqueKeysWithValues: sessions.map { ($0.id, $0) })
                     ForEach(placed) { sprite in
-                        if let session = sessions.first(where: { $0.id == sprite.sessionId }) {
+                        if let session = sessionById[sprite.sessionId] {
                             GrassSpriteView(
                                 state: session.state,
                                 xOffset: sprite.xOffset,
@@ -267,12 +268,13 @@ private struct GrassSpriteView: View {
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !isAnimatingMotion)) { timeline in
-            SpriteSheetView(
+            let spriteFrame = Int(timeline.date.timeIntervalSinceReferenceDate * state.animationFPS) % state.frameCount
+
+            SpriteFrameView(
                 spriteSheet: state.spriteSheetName,
                 frameCount: state.frameCount,
                 columns: state.columns,
-                fps: state.animationFPS,
-                isAnimating: true
+                currentFrame: spriteFrame
             )
             .frame(width: spriteSize, height: spriteSize)
             .background(alignment: .bottom) {

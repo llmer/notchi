@@ -25,7 +25,7 @@ struct SpriteSheetView: View {
     }
 }
 
-private struct SpriteFrameView: View {
+struct SpriteFrameView: View {
     let spriteSheet: String
     let frameCount: Int
     let columns: Int

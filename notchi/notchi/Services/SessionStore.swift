@@ -24,8 +24,10 @@ final class SessionStore {
         }
     }
 
-    var creationSortedSessions: [SessionData] {
-        sessions.values.sorted { $0.sessionStartTime < $1.sessionStartTime }
+    private(set) var creationSortedSessions: [SessionData] = []
+
+    private func invalidateSortedSessionsCache() {
+        creationSortedSessions = sessions.values.sorted { $0.sessionStartTime < $1.sessionStartTime }
     }
 
     var activeSessionCount: Int {
@@ -191,6 +193,7 @@ final class SessionStore {
         nextSessionNumberByProject[projectName] = sessionNumber
         let session = SessionData(sessionId: sessionId, cwd: cwd, sessionNumber: sessionNumber)
         sessions[sessionId] = session
+        invalidateSortedSessionsCache()
         logger.info("Created session #\(sessionNumber): \(sessionId, privacy: .public) at \(cwd, privacy: .public)")
 
         if activeSessionCount == 1 {
@@ -204,6 +207,7 @@ final class SessionStore {
 
     private func removeSession(_ sessionId: String) {
         sessions.removeValue(forKey: sessionId)
+        invalidateSortedSessionsCache()
         logger.info("Removed session: \(sessionId, privacy: .public)")
 
         if selectedSessionId == sessionId {
