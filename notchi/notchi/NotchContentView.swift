@@ -7,6 +7,8 @@ enum NotchConstants {
 
 extension Notification.Name {
     static let notchiShouldCollapse = Notification.Name("notchiShouldCollapse")
+    static let notchiDidPopOut = Notification.Name("notchiDidPopOut")
+    static let notchiDidPopIn = Notification.Name("notchiDidPopIn")
 }
 
 private let cornerRadiusInsets = (
@@ -182,6 +184,10 @@ struct NotchContentView: View {
                             PanelHeaderButton(
                                 sfSymbol: panelManager.isPinned ? "pin.fill" : "pin",
                                 action: { panelManager.togglePin() }
+                            )
+                            PanelHeaderButton(
+                                sfSymbol: "pip.enter",
+                                action: { panelManager.popOut() }
                             )
                             PanelHeaderButton(
                                 sfSymbol: isMuted ? "bell.slash" : "bell",

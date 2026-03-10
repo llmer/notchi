@@ -7,6 +7,7 @@ final class NotchPanelManager {
 
     private(set) var isExpanded = false
     private(set) var isPinned = false
+    private(set) var isPopOut = false
     private(set) var notchSize: CGSize = .zero
     private(set) var notchRect: CGRect = .zero
     private(set) var panelRect: CGRect = .zero
@@ -73,7 +74,7 @@ final class NotchPanelManager {
     }
 
     func expand() {
-        guard !isExpanded else { return }
+        guard !isExpanded, !isPopOut else { return }
         isExpanded = true
     }
 
@@ -93,5 +94,16 @@ final class NotchPanelManager {
 
     func togglePin() {
         isPinned.toggle()
+    }
+
+    func popOut() {
+        isPopOut = true
+        collapse()
+        NotificationCenter.default.post(name: .notchiDidPopOut, object: nil)
+    }
+
+    func popIn() {
+        isPopOut = false
+        NotificationCenter.default.post(name: .notchiDidPopIn, object: nil)
     }
 }

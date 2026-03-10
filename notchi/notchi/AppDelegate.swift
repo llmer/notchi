@@ -4,6 +4,7 @@ import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var notchPanel: NotchPanel?
+    private var popOutPanel: PopOutPanel?
     private let windowHeight: CGFloat = 500
 
     private let updater: SPUUpdater
@@ -32,6 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApplication.shared.setActivationPolicy(.accessory)
         setupNotchWindow()
         observeScreenChanges()
+        observePopOut()
         startHookServices()
         startUsageService()
         updater.checkForUpdates()
@@ -105,6 +107,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             width: screenFrame.width,
             height: windowHeight
         )
+    }
+
+    private func observePopOut() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handlePopOut),
+            name: .notchiDidPopOut,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handlePopIn),
+            name: .notchiDidPopIn,
+            object: nil
+        )
+    }
+
+    @objc private func handlePopOut() {
+        MainActor.assumeIsolated {
+            showPopOutWindow()
+        }
+    }
+
+    @objc private func handlePopIn() {
+        MainActor.assumeIsolated {
+            dismissPopOutWindow()
+        }
+    }
+
+    @MainActor private func showPopOutWindow() {
+        guard popOutPanel == nil else { return }
+
+        let panelWidth: CGFloat = 420
+        let panelHeight: CGFloat = 480
+
+        var frame = NSRect(x: 0, y: 0, width: panelWidth, height: panelHeight)
+        if let screen = ScreenSelector.shared.selectedScreen ?? NSScreen.main {
+            let visibleFrame = screen.visibleFrame
+            frame.origin.x = visibleFrame.midX - panelWidth / 2
+            frame.origin.y = visibleFrame.midY - panelHeight / 2
+        }
+
+        let panel = PopOutPanel(contentRect: frame)
+
+        let contentView = PopOutContentView()
+        let hostingView = NSHostingView(rootView: contentView)
+        panel.contentView = hostingView
+        panel.orderFrontRegardless()
+
+        self.popOutPanel = panel
+    }
+
+    @MainActor private func dismissPopOutWindow() {
+        popOutPanel?.close()
+        popOutPanel = nil
     }
 
     @MainActor private func startUsageService() {
