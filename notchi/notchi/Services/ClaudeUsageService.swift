@@ -18,6 +18,7 @@ final class ClaudeUsageService {
     private var pollTimer: Timer?
     private let pollInterval: TimeInterval = 60
     private var cachedToken: String?
+    private var consecutiveRateLimits = 0
 
     private init() {}
 
@@ -76,14 +77,15 @@ final class ClaudeUsageService {
         schedulePollTimer()
     }
 
-    private func schedulePollTimer() {
+    private func schedulePollTimer(interval: TimeInterval? = nil) {
+        let effectiveInterval = interval ?? pollInterval
         pollTimer?.invalidate()
-        pollTimer = Timer.scheduledTimer(withTimeInterval: pollInterval, repeats: true) { [weak self] _ in
+        pollTimer = Timer.scheduledTimer(withTimeInterval: effectiveInterval, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 await self?.fetchUsage()
             }
         }
-        logger.info("Started usage polling (every \(self.pollInterval)s)")
+        logger.info("Started usage polling (every \(Int(effectiveInterval))s)")
     }
 
     private func fetchUsage() async {
@@ -117,12 +119,19 @@ final class ClaudeUsageService {
 
             guard httpResponse.statusCode == 200 else {
                 if httpResponse.statusCode == 429 {
+                    consecutiveRateLimits += 1
+                    let computedBackoff = min(pollInterval * pow(2.0, Double(consecutiveRateLimits)), 600)
+                    let retryAfter = httpResponse.value(forHTTPHeaderField: "Retry-After")
+                        .flatMap(TimeInterval.init) ?? 0
+                    let backoffInterval = max(computedBackoff, retryAfter)
+
                     if currentUsage == nil {
-                        error = "Rate limited, polling every \(Int(pollInterval))s"
+                        error = "Rate limited, retrying in \(Int(backoffInterval))s"
                     } else {
                         error = nil
                     }
-                    logger.debug("Rate limited (429), will retry next poll cycle")
+                    logger.debug("Rate limited (429), retrying in \(Int(backoffInterval))s (attempt \(self.consecutiveRateLimits))")
+                    schedulePollTimer(interval: backoffInterval)
                     return
                 }
 
@@ -151,6 +160,12 @@ final class ClaudeUsageService {
             isConnected = true
             error = nil
             currentUsage = usageResponse.fiveHour
+
+            if consecutiveRateLimits > 0 {
+                consecutiveRateLimits = 0
+                schedulePollTimer()
+            }
+
             logger.info("Usage fetched: \(self.currentUsage?.usagePercentage ?? 0)%")
 
         } catch {
