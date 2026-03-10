@@ -33,6 +33,13 @@ final class SessionData: Identifiable {
     private(set) var permissionMode: String = "default"
     private(set) var tty: String?
     private(set) var pendingQuestions: [PendingQuestion] = []
+    private(set) var waitingToolUseIds: Set<String> = []
+
+    var isWaitingForUser: Bool { !waitingToolUseIds.isEmpty }
+
+    func addWaitingToolUseId(_ id: String) { waitingToolUseIds.insert(id) }
+    func removeWaitingToolUseId(_ id: String) { waitingToolUseIds.remove(id) }
+    func clearWaitingToolUseIds() { waitingToolUseIds.removeAll() }
 
     private var durationTimer: Task<Void, Never>?
     private var sleepTimer: Task<Void, Never>?
@@ -215,6 +222,7 @@ final class SessionData: Identifiable {
         sleepTimer?.cancel()
         sleepTimer = nil
         isProcessing = false
+        clearWaitingToolUseIds()
     }
 
     private func trimEvents() {

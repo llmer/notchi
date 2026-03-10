@@ -71,6 +71,7 @@ final class SessionStore {
 
         switch event.event {
         case "UserPromptSubmit":
+            session.clearWaitingToolUseIds()
             if let prompt = event.userPrompt {
                 session.recordUserPrompt(prompt)
             }
@@ -86,22 +87,25 @@ final class SessionStore {
             session.updateTask(.compacting)
 
         case "SessionStart":
-            if isProcessing {
+            if isProcessing && !session.isWaitingForUser {
                 session.updateTask(.working)
             }
 
         case "PreToolUse":
             let toolInput = event.toolInput?.mapValues { $0.value }
             session.recordPreToolUse(tool: event.tool, toolInput: toolInput, toolUseId: event.toolUseId)
+            if let id = event.toolUseId { session.removeWaitingToolUseId(id) }
             if event.tool == "AskUserQuestion" {
+                if let id = event.toolUseId { session.addWaitingToolUseId(id) }
                 session.updateTask(.waiting)
                 session.setPendingQuestions(Self.parseQuestions(from: event.toolInput))
-            } else {
+            } else if !session.isWaitingForUser {
                 session.clearPendingQuestions()
                 session.updateTask(.working)
             }
 
         case "PermissionRequest":
+            if let id = event.toolUseId { session.addWaitingToolUseId(id) }
             let question = Self.buildPermissionQuestion(tool: event.tool, toolInput: event.toolInput)
             session.updateTask(.waiting)
             session.setPendingQuestions([question])
@@ -109,10 +113,14 @@ final class SessionStore {
         case "PostToolUse":
             let success = event.status != "error"
             session.recordPostToolUse(tool: event.tool, toolUseId: event.toolUseId, success: success)
-            session.clearPendingQuestions()
-            session.updateTask(.working)
+            if let id = event.toolUseId { session.removeWaitingToolUseId(id) }
+            if !session.isWaitingForUser {
+                session.clearPendingQuestions()
+                session.updateTask(.working)
+            }
 
         case "Stop":
+            session.clearWaitingToolUseIds()
             session.clearPendingQuestions()
             session.updateTask(.idle)
 
@@ -126,7 +134,7 @@ final class SessionStore {
             scheduleGoodbyeRemoval(event.sessionId)
 
         default:
-            if !isProcessing && session.task != .idle {
+            if !isProcessing && session.task != .idle && !session.isWaitingForUser {
                 session.updateTask(.idle)
             }
         }
