@@ -160,11 +160,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.orderFrontRegardless()
 
         self.popOutPanel = panel
+        notchPanel?.orderOut(nil)
     }
 
     @MainActor private func dismissPopOutWindow() {
         popOutPanel?.close()
         popOutPanel = nil
+        notchPanel?.orderFrontRegardless()
     }
 
     @MainActor private func startUsageService() {
