@@ -158,14 +158,18 @@ private struct GrassSpriteView: View {
         guard state.bobAmplitude > 0 else { return 0 }
         return state.task == .working ? 1.5 : 1
     }
-    private let glowColor = Color(red: 0.4, green: 0.7, blue: 1.0)
+    private func rainbowGlowColor(at date: Date) -> Color {
+        let t = date.timeIntervalSinceReferenceDate
+        let hue = t.truncatingRemainder(dividingBy: 3.0) / 3.0
+        return Color(hue: hue, saturation: 0.8, brightness: 1.0)
+    }
 
     private var swayAmplitude: Double {
         (state.task == .sleeping || state.task == .compacting) ? 0 : state.swayAmplitude
     }
 
     private var isAnimatingMotion: Bool {
-        bobAmplitude > 0 || swayAmplitude > 0 || state.emotion == .sob
+        bobAmplitude > 0 || swayAmplitude > 0 || state.emotion == .sob || glowOpacity > 0
     }
 
     private var bobDuration: Double {
@@ -194,9 +198,9 @@ private struct GrassSpriteView: View {
             .background(alignment: .bottom) {
                 if glowOpacity > 0 {
                     Ellipse()
-                        .fill(glowColor.opacity(glowOpacity))
-                        .frame(width: SpriteLayout.size * 0.85, height: SpriteLayout.size * 0.25)
-                        .blur(radius: 8)
+                        .fill(rainbowGlowColor(at: timeline.date).opacity(glowOpacity))
+                        .frame(width: SpriteLayout.size * 0.9, height: SpriteLayout.size * 0.3)
+                        .blur(radius: 10)
                         .offset(y: 4)
                 }
             }
