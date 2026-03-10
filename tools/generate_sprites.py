@@ -118,54 +118,49 @@ def draw_sword(frame: Image.Image, x: int, y: int, angle_deg: float) -> Image.Im
     return result
 
 
-def draw_wave_arm(frame: Image.Image, angle_deg: float) -> Image.Image:
+def draw_white_flag(frame: Image.Image, angle_deg: float, flutter: int = 0) -> Image.Image:
     """
-    Draw a visible waving arm extending from the upper-right side of the character.
+    Draw a white flag on a pole extending from the upper-right side of the character.
 
-    Uses a dark outline and lighter fill so the arm is clearly distinct from
-    the orange body, similar to how the sword contrasts in battle sprites.
-    The arm pivots from the body edge and extends outward.
+    The pole is dark brown, the flag is white with a gray outline so it reads
+    clearly against any background. `flutter` shifts the flag shape slightly
+    per frame to simulate cloth movement.
     """
     alpha = frame.split()[3]
     bbox = alpha.getbbox()
     if bbox is None:
         bbox = (16, 16, 48, 48)
 
-    # Arm pivot: at the right edge of the body, upper third
-    arm_x = bbox[2]
-    arm_y = bbox[1] + (bbox[3] - bbox[1]) // 3
+    # Flag pivot: right edge of body, upper third
+    flag_x = bbox[2]
+    flag_y = bbox[1] + (bbox[3] - bbox[1]) // 3
 
-    # Draw arm on a temporary canvas, pivot at center
-    canvas_size = 32
-    arm_img = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(arm_img)
+    canvas_size = 40
+    flag_img = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(flag_img)
 
     cx, cy = canvas_size // 2, canvas_size // 2
 
-    # Colors — dark outline makes the arm pop against the orange body
-    outline_color = (80, 50, 20, 255)       # dark brown outline
-    arm_color = (227, 142, 68, 255)         # orange fill matching body
-    hand_color = (245, 200, 130, 255)       # lighter hand/mitten
+    pole_color = (80, 50, 20, 255)          # dark brown pole
+    flag_outline = (160, 160, 160, 255)     # gray outline on flag
+    flag_fill = (240, 240, 240, 255)        # white flag
 
-    # Arm shaft with outline: 3px wide arm going upward from pivot
-    # Outline first (4px wide)
-    draw.rectangle([cx - 2, cy - 9, cx + 1, cy], fill=outline_color)
-    # Fill (2px wide, inset)
-    draw.rectangle([cx - 1, cy - 8, cx, cy], fill=arm_color)
+    # Pole: 2px wide, 14px tall going upward from pivot
+    draw.rectangle([cx, cy - 14, cx + 1, cy], fill=pole_color)
 
-    # Hand/mitten at tip: wider than arm for visibility
+    # Flag cloth: 7x5 rectangle hanging off the top-right of the pole
+    # Flutter offsets shift the flag vertically by 0 or 1px per frame
+    fy = flutter
     # Outline
-    draw.rectangle([cx - 3, cy - 13, cx + 2, cy - 9], fill=outline_color)
+    draw.rectangle([cx + 2, cy - 14 + fy, cx + 9, cy - 9 + fy], fill=flag_outline)
     # Fill
-    draw.rectangle([cx - 2, cy - 12, cx + 1, cy - 10], fill=hand_color)
+    draw.rectangle([cx + 3, cy - 13 + fy, cx + 8, cy - 10 + fy], fill=flag_fill)
 
-    # Rotate around pivot point (center of canvas)
-    rotated = arm_img.rotate(angle_deg, resample=Image.BICUBIC, expand=False, center=(cx, cy))
+    rotated = flag_img.rotate(angle_deg, resample=Image.BICUBIC, expand=False, center=(cx, cy))
 
-    # Composite onto frame
     result = frame.copy()
-    paste_x = arm_x - cx
-    paste_y = arm_y - cy
+    paste_x = flag_x - cx
+    paste_y = flag_y - cy
     paste_x = max(-canvas_size + 1, min(paste_x, FRAME_SIZE - 1))
     paste_y = max(-canvas_size + 1, min(paste_y, FRAME_SIZE - 1))
     result.alpha_composite(rotated, (paste_x, paste_y))
@@ -236,17 +231,20 @@ def cmd_battle() -> None:
 
 
 def generate_goodbye(base_name: str, output_name: str) -> None:
-    """Generate a goodbye sprite sheet with a waving arm from a base idle sprite sheet."""
+    """Generate a goodbye sprite sheet with a white flag from a base idle sprite sheet."""
     print(f"  Loading base: {base_name}")
     sheet = load_spritesheet(base_name)
     frames = extract_frames(sheet)
 
-    # Wave arm angles — wide oscillation for a visible back-and-forth wave
-    wave_angles = [20, 70, 10, 75, 25, 65]
+    # Flag wave: (angle, flutter_offset) per frame — gentle sway with cloth flutter
+    flag_keyframes = [
+        (15, 0), (25, 1), (10, 0), (30, 1), (15, 0), (20, 1),
+    ]
 
     goodbye_frames = []
     for i, frame in enumerate(frames):
-        goodbye_frame = draw_wave_arm(frame, wave_angles[i])
+        angle, flutter = flag_keyframes[i]
+        goodbye_frame = draw_white_flag(frame, angle, flutter)
         goodbye_frames.append(goodbye_frame)
 
     goodbye_sheet = compose_spritesheet(goodbye_frames)
