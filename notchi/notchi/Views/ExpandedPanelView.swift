@@ -60,6 +60,7 @@ struct CollapsibleSectionHeader: View {
             .padding(.horizontal, 12)
             .frame(height: 28)
             .frame(maxWidth: .infinity)
+            .background(Color.black.opacity(isCollapsed ? 0.5 : 0))
             .background(isHovered ? Color.white.opacity(0.05) : Color.clear)
         }
         .buttonStyle(.plain)
@@ -134,8 +135,10 @@ struct ExpandedPanelView: View {
     @ViewBuilder
     private func sessionPickerContent(geometry: GeometryProxy) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Spacer(minLength: 0)
-                .frame(minHeight: geometry.size.height * 0.3)
+            Color.clear
+                .frame(height: isActivityCollapsed
+                    ? geometry.size.height - 70
+                    : geometry.size.height * 0.3)
                 .allowsHitTesting(false)
 
             CollapsibleSectionHeader(
@@ -182,8 +185,10 @@ struct ExpandedPanelView: View {
     @ViewBuilder
     private func activityContent(geometry: GeometryProxy) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Spacer(minLength: 0)
-                .frame(minHeight: geometry.size.height * 0.3)
+            Color.clear
+                .frame(height: isActivityCollapsed
+                    ? geometry.size.height - 70
+                    : geometry.size.height * 0.3)
                 .allowsHitTesting(false)
 
             CollapsibleSectionHeader(
