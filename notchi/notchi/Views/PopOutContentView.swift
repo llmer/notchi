@@ -58,6 +58,7 @@ struct PopOutContentView: View {
                 GrassIslandView(
                     sessions: sessionStore.sortedSessions,
                     selectedSessionId: sessionStore.selectedSessionId,
+                    focusedSessionId: sessionStore.focusedSessionId,
                     hoveredSessionId: hoveredSessionId
                 )
                 .frame(height: grassHeight, alignment: .bottom)

@@ -21,6 +21,7 @@ private enum SpriteLayout {
 struct GrassIslandView: View {
     let sessions: [SessionData]
     var selectedSessionId: String?
+    var focusedSessionId: String?
     var hoveredSessionId: String?
 
     private let patchWidth: CGFloat = 80
@@ -62,6 +63,7 @@ struct GrassIslandView: View {
 
     private func glowOpacity(for sessionId: String) -> Double {
         if sessionId == selectedSessionId { return 0.7 }
+        if sessionId == focusedSessionId { return 0.5 }
         if sessionId == hoveredSessionId { return 0.3 }
         return 0
     }

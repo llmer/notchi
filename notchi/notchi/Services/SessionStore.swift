@@ -33,6 +33,11 @@ final class SessionStore {
         return sessions[id]
     }
 
+    var focusedSessionId: String? {
+        guard let tty = ITermSessionDetector.shared.focusedTTY else { return nil }
+        return sessions.values.first(where: { $0.tty == tty })?.id
+    }
+
     var effectiveSession: SessionData? {
         if let selected = selectedSession {
             return selected

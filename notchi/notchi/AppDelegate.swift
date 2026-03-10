@@ -36,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         observePopOut()
         startHookServices()
         startUsageService()
+        _ = ITermSessionDetector.shared
         updater.checkForUpdates()
     }
 
