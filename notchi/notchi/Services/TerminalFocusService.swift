@@ -27,8 +27,12 @@ enum TerminalFocusService {
                     repeat with t in tabs of w
                         repeat with s in sessions of t
                             if tty of s is "\(tty)" then
-                                select t
-                                select s
+                                tell w
+                                    select t
+                                end tell
+                                tell t
+                                    select s
+                                end tell
                                 set index of w to 1
                                 activate
                                 return
